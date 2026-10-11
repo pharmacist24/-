@@ -1,0 +1,141 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  /// Ward / department the pharmacist belongs to.
+  /// One of: 10, 9, 8, 6, 5, 4, 3, 2, rcu, dialysis, nicu
+  floor        String
+  /// "pharmacist" or "admin"
+  role         String   @default("pharmacist")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([floor])
+}
+
+/// Hospital pharmacy drug catalog entry.
+/// Prices are stored in IQD. Numeric fields are nullable because some
+/// imported records only carry a unit price, others only a pack price.
+model Drug {
+  id             String    @id
+  item           String
+  genericName    String    @default("")
+  dosageForm     String    @default("")
+  unitPrice      Float?
+  company        String    @default("")
+  priceOfPack    Float?
+  noOfTabPerPack String    @default("")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([item])
+  @@index([genericName])
+  @@index([company])
+  @@index([dosageForm])
+}
+
+/// Per-floor starred drugs. A floor is a shared workspace, so starring is
+/// shared among the floor's pharmacists (not per-user).
+model Favorite {
+  id        String   @id @default(cuid())
+  drugId    String
+  floor     String
+  createdAt DateTime @default(now())
+
+  @@unique([drugId, floor])
+  @@index([floor])
+}
+
+/// Recently-viewed drugs per floor (shared workspace context).
+model RecentlyViewed {
+  id        String   @id @default(cuid())
+  drugId    String
+  floor     String
+  viewedAt  DateTime @default(now())
+
+  @@index([floor, viewedAt])
+}
+
+/// Prefilled company/manufacturer list — managed in Admin Settings so the
+/// Add-Drug form can use a Select (preventing misspellings).
+model Company {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+}
+
+/// Prefilled dosage-form list (Admin Settings + Add-Drug Select).
+model DosageForm {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+}
+
+/// A patient admitted to a floor. Prescriptions are tracked per day.
+model Patient {
+  id            String   @id @default(cuid())
+  /// Pharmacist-entered patient identifier (e.g. MRN, hospital number).
+  patientRef    String   @default("")
+  name          String
+  floor         String
+  admissionDate DateTime
+  dischargeDate DateTime?
+  roomNumber    String   @default("")
+  status        String   @default("active")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  prescriptions DailyPrescription[]
+
+  @@index([floor, admissionDate])
+}
+
+/// A single day's prescription for a patient (one per patient per day).
+model DailyPrescription {
+  id        String   @id @default(cuid())
+  patientId String
+  date      DateTime
+  notes     String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  patient Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  items   PrescriptionItem[]
+
+  @@unique([patientId, date])
+  @@index([patientId])
+}
+
+/// A drug line item within a day's prescription.
+model PrescriptionItem {
+  id                  String   @id @default(cuid())
+  prescriptionId      String
+  drugId              String
+  /// Snapshot of the drug name at prescription time (in case the drug is later edited/deleted).
+  drugName            String
+  quantity            Int      @default(1)
+  /// Snapshot of the unit price at prescription time.
+  unitPrice           Float    @default(0)
+  createdAt           DateTime @default(now())
+
+  prescription DailyPrescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+
+  @@index([prescriptionId])
+  @@index([drugId])
+}
