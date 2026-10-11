@@ -1,59 +1,46 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { db } from "@/lib/db";
 import { getSession, FLOORS } from "@/lib/auth";
+import { handleApiError, readJson, requireUser, ApiError } from "@/lib/api";
+
+function validFloor(floor: string): string {
+  if (!(FLOORS as readonly string[]).includes(floor)) {
+    throw new ApiError(400, "Invalid floor");
+  }
+  return floor;
+}
 
 // GET /api/favorites?floor=9 — list favorited drug ids for a floor
 export async function GET(request: NextRequest) {
   try {
     const session = await getSession();
-    const { searchParams } = new URL(request.url);
-    const floor =
-      searchParams.get("floor") ?? session?.floor ?? FLOORS[0];
-
-    if (!FLOORS.includes(floor as never)) {
-      return NextResponse.json({ error: "Invalid floor" }, { status: 400 });
-    }
-
+    const floor = validFloor(
+      request.nextUrl.searchParams.get("floor") ?? session?.floor ?? FLOORS[0]
+    );
     const favorites = await db.favorite.findMany({
       where: { floor },
       select: { drugId: true },
     });
     return NextResponse.json({ favorites: favorites.map((f) => f.drugId) });
   } catch (error) {
-    console.error("GET /api/favorites failed:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch favorites" },
-      { status: 500 }
-    );
+    return handleApiError(error, "GET /api/favorites", "Failed to fetch favorites");
   }
 }
+
+const starSchema = z.object({
+  drugId: z.string().min(1, "drugId is required"),
+  floor: z.enum(FLOORS, { message: "Invalid floor" }),
+});
 
 // POST /api/favorites — star a drug for a floor
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: "Sign in required" }, { status: 401 });
-    }
-    const body = await request.json().catch(() => null);
-    if (!body) {
-      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-    }
-    const { drugId, floor } = body as { drugId?: string; floor?: string };
-    if (!drugId || !floor) {
-      return NextResponse.json(
-        { error: "drugId and floor are required" },
-        { status: 400 }
-      );
-    }
-    if (!FLOORS.includes(floor as never)) {
-      return NextResponse.json({ error: "Invalid floor" }, { status: 400 });
-    }
+    await requireUser();
+    const { drugId, floor } = starSchema.parse(await readJson(request));
 
-    const drug = await db.drug.findUnique({ where: { id: drugId } });
-    if (!drug) {
-      return NextResponse.json({ error: "Drug not found" }, { status: 404 });
-    }
+    const drug = await db.drug.findUnique({ where: { id: drugId }, select: { id: true } });
+    if (!drug) throw new ApiError(404, "Drug not found");
 
     await db.favorite.upsert({
       where: { drugId_floor: { drugId, floor } },
@@ -62,40 +49,22 @@ export async function POST(request: NextRequest) {
     });
     return NextResponse.json({ starred: true, drugId, floor });
   } catch (error) {
-    console.error("POST /api/favorites failed:", error);
-    return NextResponse.json(
-      { error: "Failed to star drug" },
-      { status: 500 }
-    );
+    return handleApiError(error, "POST /api/favorites", "Failed to star drug");
   }
 }
 
 // DELETE /api/favorites?drugId=...&floor=... — unstar a drug for a floor
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: "Sign in required" }, { status: 401 });
-    }
-    const { searchParams } = new URL(request.url);
+    const session = await requireUser();
+    const { searchParams } = request.nextUrl;
     const drugId = searchParams.get("drugId");
-    const floor =
-      searchParams.get("floor") ?? session.floor;
-
-    if (!drugId) {
-      return NextResponse.json({ error: "drugId is required" }, { status: 400 });
-    }
-    if (!FLOORS.includes(floor as never)) {
-      return NextResponse.json({ error: "Invalid floor" }, { status: 400 });
-    }
+    if (!drugId) throw new ApiError(400, "drugId is required");
+    const floor = validFloor(searchParams.get("floor") ?? session.floor);
 
     await db.favorite.deleteMany({ where: { drugId, floor } });
     return NextResponse.json({ starred: false, drugId, floor });
   } catch (error) {
-    console.error("DELETE /api/favorites failed:", error);
-    return NextResponse.json(
-      { error: "Failed to unstar drug" },
-      { status: 500 }
-    );
+    return handleApiError(error, "DELETE /api/favorites", "Failed to unstar drug");
   }
 }

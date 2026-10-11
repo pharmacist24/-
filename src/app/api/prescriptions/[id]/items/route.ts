@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { getSession } from "@/lib/auth";
+import { handleApiError, readJson, requireUser, ApiError } from "@/lib/api";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -9,37 +9,28 @@ interface RouteContext {
 
 const addSchema = z.object({
   drugId: z.string().min(1, "Drug is required"),
-  quantity: z.number().int().min(1, "Quantity must be at least 1"),
+  quantity: z.number().int().min(1, "Quantity must be at least 1").max(10000),
 });
 
 // POST /api/prescriptions/[id]/items — add a drug to a daily prescription
 export async function POST(request: NextRequest, { params }: RouteContext) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: "Sign in required" }, { status: 401 });
-    }
+    await requireUser();
     const { id: prescriptionId } = await params;
-    const body = await request.json().catch(() => null);
-    if (!body) {
-      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-    }
-    const data = addSchema.parse(body);
+    const data = addSchema.parse(await readJson(request));
 
-    const prescription = await db.dailyPrescription.findUnique({
-      where: { id: prescriptionId },
-    });
-    if (!prescription) {
-      return NextResponse.json(
-        { error: "Prescription not found" },
-        { status: 404 }
-      );
-    }
-
-    const drug = await db.drug.findUnique({ where: { id: data.drugId } });
-    if (!drug) {
-      return NextResponse.json({ error: "Drug not found" }, { status: 404 });
-    }
+    const [prescription, drug] = await Promise.all([
+      db.dailyPrescription.findUnique({
+        where: { id: prescriptionId },
+        select: { id: true },
+      }),
+      db.drug.findUnique({
+        where: { id: data.drugId },
+        select: { id: true, item: true, unitPrice: true },
+      }),
+    ]);
+    if (!prescription) throw new ApiError(404, "Prescription not found");
+    if (!drug) throw new ApiError(404, "Drug not found");
 
     const item = await db.prescriptionItem.create({
       data: {
@@ -53,38 +44,25 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
     return NextResponse.json({ item }, { status: 201 });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.errors[0]?.message ?? "Invalid input" },
-        { status: 400 }
-      );
-    }
-    console.error("POST item failed:", error);
-    return NextResponse.json({ error: "Failed" }, { status: 500 });
+    return handleApiError(error, "POST item", "Failed to add drug");
   }
 }
 
 // DELETE /api/prescriptions/[id]/items?itemId=... — remove an item
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: "Sign in required" }, { status: 401 });
-    }
+    await requireUser();
     const { id: prescriptionId } = await params;
-    const { searchParams } = new URL(request.url);
-    const itemId = searchParams.get("itemId");
-    if (!itemId) {
-      return NextResponse.json({ error: "itemId is required" }, { status: 400 });
-    }
+    const itemId = request.nextUrl.searchParams.get("itemId");
+    if (!itemId) throw new ApiError(400, "itemId is required");
 
-    await db.prescriptionItem.deleteMany({
+    const { count } = await db.prescriptionItem.deleteMany({
       where: { id: itemId, prescriptionId },
     });
+    if (count === 0) throw new ApiError(404, "Item not found");
 
     return NextResponse.json({ deleted: true, itemId });
   } catch (error) {
-    console.error("DELETE item failed:", error);
-    return NextResponse.json({ error: "Failed" }, { status: 500 });
+    return handleApiError(error, "DELETE item", "Failed to remove drug");
   }
 }

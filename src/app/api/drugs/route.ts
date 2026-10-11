@@ -1,53 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
 import { catalog } from "@/lib/catalog";
 import { coerceDrugInput } from "@/lib/drug-validation";
+import { handleApiError, readJson, requireAdmin } from "@/lib/api";
 
 // GET /api/drugs — list all drugs (optionally ?q=search term)
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const q = searchParams.get("q")?.trim();
+    const q = request.nextUrl.searchParams.get("q")?.trim().slice(0, 200);
     const drugs = await catalog.list(q);
     return NextResponse.json({ drugs, readOnly: catalog.isReadOnly });
   } catch (error) {
-    console.error("GET /api/drugs failed:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch drugs" },
-      { status: 500 }
-    );
+    return handleApiError(error, "GET /api/drugs", "Failed to fetch drugs");
   }
 }
 
-// POST /api/drugs — create a new drug
+// POST /api/drugs — create a new drug (admin only)
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json().catch(() => null);
-    if (!body) {
-      return NextResponse.json(
-        { error: "Invalid JSON body" },
-        { status: 400 }
-      );
-    }
-    const data = coerceDrugInput(body);
+    await requireAdmin();
+    const data = coerceDrugInput(await readJson(request));
     const drug = await catalog.create(data);
     return NextResponse.json({ drug }, { status: 201 });
   } catch (error) {
-    console.error("POST /api/drugs failed:", error);
-    const message =
-      error instanceof Error ? error.message : "Failed to create drug";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return handleApiError(error, "POST /api/drugs", "Failed to create drug");
   }
 }
 
-// DELETE /api/drugs — bulk reset to seed data
+// DELETE /api/drugs — bulk reset to seed data (admin only)
 export async function DELETE() {
   try {
+    await requireAdmin();
     const count = await catalog.reset();
     return NextResponse.json({ reset: true, count });
   } catch (error) {
-    console.error("DELETE /api/drugs failed:", error);
-    const message =
-      error instanceof Error ? error.message : "Failed to reset catalog";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return handleApiError(error, "DELETE /api/drugs", "Failed to reset catalog");
   }
 }

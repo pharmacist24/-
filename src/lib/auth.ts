@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 
-const JWT_SECRET = process.env.JWT_SECRET || "mediprice-dev-secret-change-me";
+const DEV_JWT_SECRET = "mediprice-dev-secret-change-me";
 const COOKIE_NAME = "mediprice_session";
 const SESSION_MAX_AGE_DAYS = 7;
 
@@ -47,6 +47,17 @@ export function floorLabel(floor: string): string {
   return map[floor] ?? floor;
 }
 
+// In production a missing JWT_SECRET would let anyone forge an admin session
+// with the public dev secret, so refuse to sign or verify sessions instead.
+function jwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (secret) return secret;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("JWT_SECRET environment variable is not set");
+  }
+  return DEV_JWT_SECRET;
+}
+
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 10);
 }
@@ -59,12 +70,32 @@ export async function verifyPassword(
 }
 
 export function signSession(user: SessionUser): string {
-  return jwt.sign(user, JWT_SECRET, { expiresIn: `${SESSION_MAX_AGE_DAYS}d` });
+  // Sign only the session fields (not whatever extra props the object has).
+  const payload: SessionUser = {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    floor: user.floor,
+    role: user.role,
+  };
+  return jwt.sign(payload, jwtSecret(), {
+    expiresIn: `${SESSION_MAX_AGE_DAYS}d`,
+    algorithm: "HS256",
+  });
 }
 
 export function verifySession(token: string): SessionUser | null {
+  const secret = jwtSecret();
   try {
-    return jwt.verify(token, JWT_SECRET) as SessionUser;
+    const decoded = jwt.verify(token, secret, { algorithms: ["HS256"] });
+    if (typeof decoded !== "object" || !decoded.id || !decoded.role) return null;
+    return {
+      id: decoded.id,
+      email: decoded.email,
+      name: decoded.name,
+      floor: decoded.floor,
+      role: decoded.role === "admin" ? "admin" : "pharmacist",
+    };
   } catch {
     return null;
   }

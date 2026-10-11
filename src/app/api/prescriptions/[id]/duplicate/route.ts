@@ -1,87 +1,74 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getSession } from "@/lib/auth";
+import { handleApiError, parseDate, requireUser, ApiError } from "@/lib/api";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
 }
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 // POST /api/prescriptions/[id]/duplicate
 // Duplicates the source day's items into a NEW day (next calendar day by
 // default, or a ?date=YYYY-MM-DD query param). The new day becomes editable.
 export async function POST(request: NextRequest, { params }: RouteContext) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: "Sign in required" }, { status: 401 });
-    }
+    await requireUser();
     const { id: sourcePrescriptionId } = await params;
 
     const source = await db.dailyPrescription.findUnique({
       where: { id: sourcePrescriptionId },
       include: { items: true },
     });
-    if (!source) {
-      return NextResponse.json(
-        { error: "Source prescription not found" },
-        { status: 404 }
-      );
-    }
+    if (!source) throw new ApiError(404, "Source prescription not found");
 
     // Determine the new day's date: next calendar day after the source.
-    const { searchParams } = new URL(request.url);
-    const dateParam = searchParams.get("date");
-    let newDate: Date;
-    if (dateParam) {
-      newDate = new Date(dateParam);
-    } else {
-      const src = new Date(source.date);
-      newDate = new Date(src.getTime() + 24 * 60 * 60 * 1000);
-    }
+    const dateParam = request.nextUrl.searchParams.get("date");
+    const newDate = dateParam
+      ? parseDate(dateParam)
+      : new Date(source.date.getTime() + DAY_MS);
 
-    // Upsert a new daily prescription for the new date (unique[patientId,date]).
-    const newPrescription = await db.dailyPrescription.upsert({
-      where: {
-        patientId_date: {
-          patientId: source.patientId,
-          date: newDate,
-        },
-      },
-      create: {
-        patientId: source.patientId,
-        date: newDate,
-        notes: source.notes,
-      },
-      update: {
-        notes: source.notes,
-      },
-    });
-
-    // Copy all items from the source into the new day (fresh IDs, snapshots
-    // of drugName + unitPrice so the duplicate is independently editable).
-    if (source.items.length > 0) {
-      await db.prescriptionItem.createMany({
-        data: source.items.map((it) => ({
-          prescriptionId: newPrescription.id,
-          drugId: it.drugId,
-          drugName: it.drugName,
-          quantity: it.quantity,
-          unitPrice: it.unitPrice,
-        })),
+    // All-or-nothing, and never append a second copy of the items onto a day
+    // that already has drugs (e.g. a double-click on "Duplicate").
+    const result = await db.$transaction(async (tx) => {
+      const existing = await tx.dailyPrescription.findUnique({
+        where: { patientId_date: { patientId: source.patientId, date: newDate } },
+        select: { id: true, _count: { select: { items: true } } },
       });
-    }
+      if (existing && existing._count.items > 0) {
+        throw new ApiError(409, "A prescription with drugs already exists for that day");
+      }
 
-    const result = await db.dailyPrescription.findUnique({
-      where: { id: newPrescription.id },
-      include: { items: true },
+      const target =
+        existing ??
+        (await tx.dailyPrescription.create({
+          data: { patientId: source.patientId, date: newDate, notes: source.notes },
+          select: { id: true, _count: { select: { items: true } } },
+        }));
+
+      // Copy all items (fresh IDs, snapshots of drugName + unitPrice so the
+      // duplicate is independently editable).
+      if (source.items.length > 0) {
+        await tx.prescriptionItem.createMany({
+          data: source.items.map((it) => ({
+            prescriptionId: target.id,
+            drugId: it.drugId,
+            drugName: it.drugName,
+            quantity: it.quantity,
+            unitPrice: it.unitPrice,
+          })),
+        });
+      }
+
+      return tx.dailyPrescription.update({
+        where: { id: target.id },
+        data: { notes: source.notes },
+        include: { items: true },
+      });
     });
 
     return NextResponse.json({ prescription: result }, { status: 201 });
   } catch (error) {
-    console.error("Duplicate prescription failed:", error);
-    return NextResponse.json(
-      { error: "Failed to duplicate prescription" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Duplicate prescription", "Failed to duplicate prescription");
   }
 }

@@ -3,13 +3,13 @@ import { z } from "zod";
 // Shared validation schema for drug records (used by API routes).
 export const drugInputSchema = z.object({
   item: z.string().trim().min(1, "Drug brand name is required").max(160, "Brand name is too long"),
-  genericName: z.string().trim().max(160, "Generic name is too long").optional().or(z.literal("")),
+  genericName: z.string().trim().max(160, "Generic name is too long").default(""),
   dosageForm: z.string().trim().min(1, "Dosage form is required"),
   unitPrice: z.number().nullable().refine(
     (v) => v === null || (typeof v === "number" && v >= 0),
     "Unit price must be a non-negative number"
   ),
-  company: z.string().trim().max(120, "Company name is too long").optional().or(z.literal("")),
+  company: z.string().trim().max(120, "Company name is too long").default(""),
   priceOfPack: z
     .number()
     .nullable()
@@ -17,7 +17,7 @@ export const drugInputSchema = z.object({
       (v) => v === null || (typeof v === "number" && v >= 0),
       "Pack price must be a non-negative number"
     ),
-  noOfTabPerPack: z.string().trim().max(200, "Too long").optional().or(z.literal("")),
+  noOfTabPerPack: z.string().trim().max(200, "Too long").default(""),
 });
 
 export type DrugInput = z.infer<typeof drugInputSchema>;

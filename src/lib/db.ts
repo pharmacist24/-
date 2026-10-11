@@ -4,18 +4,15 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-// Optimized for Vercel serverless + Supabase pooled connections.
-// - connection_limit=1 per function instance (Supabase free tier allows ~20)
-// - pool_timeout=10s to fail fast on pool exhaustion
+// Optimized for Vercel serverless + Supabase pooled connections. Pool size is
+// controlled from DATABASE_URL (e.g. `?pgbouncer=true&connection_limit=1`).
 export const db =
   globalForPrisma.prisma ??
+  // The datasource URL is read from DATABASE_URL by Prisma on first query, so
+  // importing this module never fails (e.g. during `next build`).
   new PrismaClient({
     log: ['warn', 'error'],
-    datasources: {
-      db: {
-        url: process.env.DATABASE_URL,
-      },
-    },
   })
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db
+// Reuse one client per warm serverless instance (and across dev hot reloads).
+globalForPrisma.prisma = db

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getSession } from "@/lib/auth";
+import { handleApiError, requireAdmin } from "@/lib/api";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -9,18 +9,11 @@ interface RouteContext {
 // DELETE /api/companies/[id] — remove a prefilled company (admin only)
 export async function DELETE(_request: NextRequest, { params }: RouteContext) {
   try {
-    const session = await getSession();
-    if (!session || session.role !== "admin") {
-      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
-    }
+    await requireAdmin();
     const { id } = await params;
     await db.company.delete({ where: { id } });
     return NextResponse.json({ deleted: true, id });
   } catch (error) {
-    console.error("DELETE /api/companies/[id] failed:", error);
-    return NextResponse.json(
-      { error: "Failed to delete company" },
-      { status: 500 }
-    );
+    return handleApiError(error, "DELETE /api/companies/[id]", "Failed to delete company");
   }
 }

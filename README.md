@@ -75,13 +75,27 @@ Open <http://localhost:3000>.
 The catalog is backed by SQLite via Prisma. The database is the single source
 of truth; the frontend reads and writes through `/api/drugs`.
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/drugs` | List all drugs (`?q=term` to search) |
-| `POST` | `/api/drugs` | Create a new drug |
-| `PUT` | `/api/drugs/[id]` | Update an existing drug |
-| `DELETE` | `/api/drugs/[id]` | Delete a single drug |
-| `DELETE` | `/api/drugs` | Reset catalog to seed data |
+| Method | Endpoint | Access | Description |
+|--------|----------|--------|-------------|
+| `GET` | `/api` | public | Health check (`database: ok / unconfigured / error`) |
+| `GET` | `/api/drugs` | public | List all drugs (`?q=term` to search) |
+| `POST` | `/api/drugs` | admin | Create a new drug |
+| `PUT` | `/api/drugs/[id]` | admin | Update an existing drug |
+| `DELETE` | `/api/drugs/[id]` | admin | Delete a single drug |
+| `DELETE` | `/api/drugs` | admin | Reset catalog to seed data |
+| `GET/POST` | `/api/companies`, `/api/dosage-forms` | GET public, POST admin | Prefilled lists |
+| `*` | `/api/patients/**`, `/api/prescriptions/**` | signed in | Patients & daily prescriptions |
+
+Errors are always JSON `{ "error": "message" }` with a meaningful status:
+400 invalid input, 401 not signed in, 403 not admin, 404 not found,
+409 conflict, 503 read-only demo mode.
+
+### Environment variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | yes (for writes) | Postgres connection string |
+| `JWT_SECRET` | **yes in production** | Long random string used to sign session cookies. Sessions are refused if it is missing. Generate one with `openssl rand -base64 32`. |
 
 ### Re-seeding the database
 
@@ -95,5 +109,6 @@ The seed data was imported from `upload/اسعار_2026_reorganized.xlsx` (2 she
 
 ## Admin Access
 
-The demo admin password is `admin123`. It is a client-side check for the demo;
-replace it with proper authentication (e.g. NextAuth.js) before production use.
+Admin accounts are created with `bun run scripts/create-admin.ts`; public
+sign-up always creates pharmacist accounts. All catalog writes and the
+company/dosage-form settings are enforced server-side for the `admin` role.

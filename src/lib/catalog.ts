@@ -18,6 +18,7 @@
 
 import type { Drug } from "@/lib/drug-data";
 import { SEED_DRUGS } from "@/lib/drug-data";
+import { ApiError } from "@/lib/api";
 
 type DrugRow = Drug;
 
@@ -30,9 +31,20 @@ function isPostgresConfigured(): boolean {
 // ---- Prisma-backed implementation (used when Postgres is configured) ----
 async function prismaList(q?: string): Promise<DrugRow[]> {
   const { db } = await import("@/lib/db");
-  // Only select needed columns — don't fetch timestamps.
+  // Every search term must match at least one text column (filtered in SQL).
+  const terms = (q ?? "").split(/\s+/).filter(Boolean).slice(0, 10);
   const all = await db.drug.findMany({
+    where: terms.length
+      ? {
+          AND: terms.map((t) => ({
+            OR: (["item", "genericName", "company", "dosageForm"] as const).map(
+              (field) => ({ [field]: { contains: t, mode: "insensitive" as const } })
+            ),
+          })),
+        }
+      : undefined,
     orderBy: { item: "asc" },
+    // Only select needed columns — don't fetch timestamps.
     select: {
       id: true,
       item: true,
@@ -44,12 +56,7 @@ async function prismaList(q?: string): Promise<DrugRow[]> {
       noOfTabPerPack: true,
     },
   });
-  if (!q) return all as DrugRow[];
-  const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
-  return all.filter((d) => {
-    const haystack = `${d.item} ${d.genericName} ${d.company} ${d.dosageForm}`.toLowerCase();
-    return terms.every((t) => haystack.includes(t));
-  }) as DrugRow[];
+  return all as DrugRow[];
 }
 
 async function prismaCreate(data: Omit<Drug, "id">): Promise<DrugRow> {
@@ -94,20 +101,23 @@ async function prismaRemove(id: string): Promise<void> {
 
 async function prismaReset(): Promise<number> {
   const { db } = await import("@/lib/db");
-  await db.drug.deleteMany({});
-  await db.drug.createMany({
-    data: SEED_DRUGS.map((d) => ({
-      id: d.id,
-      item: d.item,
-      genericName: d.genericName,
-      dosageForm: d.dosageForm,
-      unitPrice: d.unitPrice,
-      company: d.company,
-      priceOfPack: d.priceOfPack,
-      noOfTabPerPack: d.noOfTabPerPack,
-    })),
+  // One transaction so a failed re-seed never leaves the catalog empty.
+  return db.$transaction(async (tx) => {
+    await tx.drug.deleteMany({});
+    await tx.drug.createMany({
+      data: SEED_DRUGS.map((d) => ({
+        id: d.id,
+        item: d.item,
+        genericName: d.genericName,
+        dosageForm: d.dosageForm,
+        unitPrice: d.unitPrice,
+        company: d.company,
+        priceOfPack: d.priceOfPack,
+        noOfTabPerPack: d.noOfTabPerPack,
+      })),
+    });
+    return tx.drug.count();
   });
-  return db.drug.count();
 }
 
 // ---- In-memory fallback (read-only demo) ----
@@ -146,23 +156,23 @@ export const catalog = {
 
   async create(_data: Omit<Drug, "id">): Promise<DrugRow> {
     if (isPostgresConfigured()) return prismaCreate(_data);
-    throw new Error(READ_ONLY_ERROR);
+    throw new ApiError(503, READ_ONLY_ERROR);
   },
 
   async update(id: string, data: Omit<Drug, "id">): Promise<DrugRow> {
     if (isPostgresConfigured()) return prismaUpdate(id, data);
-    throw new Error(READ_ONLY_ERROR);
+    throw new ApiError(503, READ_ONLY_ERROR);
   },
 
   async remove(id: string): Promise<void> {
     if (isPostgresConfigured()) {
       return prismaRemove(id);
     }
-    throw new Error(READ_ONLY_ERROR);
+    throw new ApiError(503, READ_ONLY_ERROR);
   },
 
   async reset(): Promise<number> {
     if (isPostgresConfigured()) return prismaReset();
-    throw new Error(READ_ONLY_ERROR);
+    throw new ApiError(503, READ_ONLY_ERROR);
   },
 };

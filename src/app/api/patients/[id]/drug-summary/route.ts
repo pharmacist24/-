@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { handleApiError, requireUser } from "@/lib/api";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -11,6 +12,7 @@ interface RouteContext {
 // total cost). Used by the printable A4 drug summary view.
 export async function GET(_request: NextRequest, { params }: RouteContext) {
   try {
+    await requireUser();
     const { id } = await params;
     const patient = await db.patient.findUnique({
       where: { id },
@@ -89,10 +91,6 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
       daysCount: patient.prescriptions.length,
     });
   } catch (error) {
-    console.error("GET drug-summary failed:", error);
-    return NextResponse.json(
-      { error: "Failed to generate drug summary" },
-      { status: 500 }
-    );
+    return handleApiError(error, "GET drug-summary", "Failed to generate drug summary");
   }
 }

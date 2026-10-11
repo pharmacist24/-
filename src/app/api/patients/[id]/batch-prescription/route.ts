@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { getSession } from "@/lib/auth";
+import { dateString, handleApiError, readJson, requireUser, ApiError } from "@/lib/api";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -18,69 +18,51 @@ interface RouteContext {
  * Now: one HTTP request → one DB transaction → one response.
  */
 const batchSchema = z.object({
-  date: z.string().min(1, "Date is required"),
-  items: z.array(
-    z.object({
-      drugId: z.string().min(1),
-      quantity: z.number().int().min(1),
-    })
-  ).min(1, "At least one drug is required"),
+  date: dateString("Date is required"),
+  items: z
+    .array(
+      z.object({
+        drugId: z.string().min(1),
+        quantity: z.number().int().min(1, "Quantity must be at least 1").max(10000),
+      })
+    )
+    .min(1, "At least one drug is required")
+    .max(200, "Too many drugs in one prescription"),
 });
 
 export async function POST(request: NextRequest, { params }: RouteContext) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: "Sign in required" }, { status: 401 });
-    }
-
+    await requireUser();
     const { id: patientId } = await params;
-    const body = await request.json().catch(() => null);
-    if (!body) {
-      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-    }
-    const data = batchSchema.parse(body);
+    const data = batchSchema.parse(await readJson(request));
 
     // Verify patient exists.
     const patient = await db.patient.findUnique({
       where: { id: patientId },
-      select: { id: true, name: true }, // only fetch what we need
+      select: { id: true },
     });
-    if (!patient) {
-      return NextResponse.json({ error: "Patient not found" }, { status: 404 });
-    }
+    if (!patient) throw new ApiError(404, "Patient not found");
 
     // Fetch all drug snapshots in ONE query (not N queries).
-    const drugIds = data.items.map((it) => it.drugId);
+    const drugIds = [...new Set(data.items.map((it) => it.drugId))];
     const drugs = await db.drug.findMany({
       where: { id: { in: drugIds } },
-      select: { id: true, item: true, unitPrice: true }, // only needed fields
+      select: { id: true, item: true, unitPrice: true },
     });
     const drugMap = new Map(drugs.map((d) => [d.id, d]));
 
-    // Validate all drugs exist.
     const missing = drugIds.filter((id) => !drugMap.has(id));
     if (missing.length > 0) {
-      return NextResponse.json(
-        { error: `Drug(s) not found: ${missing.join(", ")}` },
-        { status: 404 }
-      );
+      throw new ApiError(404, `Drug(s) not found: ${missing.join(", ")}`);
     }
 
     // Create the day + all items in a single transaction.
+    const date = new Date(data.date);
     const result = await db.$transaction(async (tx) => {
       // Upsert the prescription day (one per patient per date).
       const day = await tx.dailyPrescription.upsert({
-        where: {
-          patientId_date: {
-            patientId,
-            date: new Date(data.date),
-          },
-        },
-        create: {
-          patientId,
-          date: new Date(data.date),
-        },
+        where: { patientId_date: { patientId, date } },
+        create: { patientId, date },
         update: {},
       });
 
@@ -106,16 +88,6 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       { status: 201 }
     );
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.errors[0]?.message ?? "Invalid input" },
-        { status: 400 }
-      );
-    }
-    console.error("Batch prescription failed:", error);
-    return NextResponse.json(
-      { error: "Failed to create prescription" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Batch prescription", "Failed to create prescription");
   }
 }
