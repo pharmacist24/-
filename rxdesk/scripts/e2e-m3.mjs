@@ -1,0 +1,75 @@
+// Milestone 3 checks: prescription screen, drug library, phrases, templates, history.
+export default async function ({ page, shot, check, sleep }) {
+  await page.click('[data-nav="rx"]')
+  await page.waitForSelector('#patient-picker')
+  await page.fill('#patient-picker', 'أحمد')
+  await sleep(400)
+  await page.keyboard.press('Enter')
+  await page.waitForSelector('#rx-patient-name')
+  check((await page.textContent('#rx-patient-name')).includes('أحمد'), 'patient picked with Enter')
+
+  await page.fill('#rx-diagnosis', 'Acute sinusitis')
+  const drug0 = '[data-row="0"][data-field="drugName"]'
+  await page.click(drug0)
+  await page.keyboard.type('Augm', { delay: 40 })
+  await sleep(500)
+  await page.keyboard.press('Enter')
+  await sleep(300)
+  check((await page.inputValue(drug0)) === 'Augmentin', 'drug autocomplete picked Augmentin')
+  check((await page.inputValue('[data-row="0"][data-field="strength"]')) === '1 g', 'drug defaults filled (strength)')
+  check(await page.evaluate(() => document.activeElement?.getAttribute('data-field') === 'dose'), 'focus moved to dose after picking drug')
+  check((await page.locator('[data-allergy-warning]').count()) === 1, 'penicillin allergy warning shown for Augmentin')
+
+  // Type a brand new drug in row 2 and use a dose phrase
+  await page.click('[data-row="1"][data-field="drugName"]')
+  await page.keyboard.type('Sinupret Forte', { delay: 20 })
+  await sleep(300)
+  await page.click('[data-row="1"][data-field="form"]')
+  await page.keyboard.type('Tab')
+  await page.keyboard.press('Escape')
+  const firstPhrase = page.locator('[data-phrase]').first()
+  const phraseText = (await firstPhrase.textContent()).trim()
+  await firstPhrase.click()
+  await sleep(200)
+  check((await page.inputValue('[data-row="1"][data-field="dose"]')) === phraseText, 'dose phrase inserted into active row')
+
+  // Insert a template
+  await page.click('[data-template="Common cold / Flu"]')
+  await sleep(300)
+  const rowCount = await page.locator('[data-med-row]').count()
+  check(rowCount === 5, `template appended 2 medicines (rows incl. blank: ${rowCount})`)
+
+  await page.fill('#rx-notes', 'راحة تامة وشرب سوائل دافئة')
+  await page.fill('#rx-labs', 'CBC')
+  await shot('10-rx-filled')
+  await page.keyboard.press('Control+s')
+  await sleep(700)
+  const title = await page.textContent('h3')
+  check(/\d+/.test(title), 'Ctrl+S saved the prescription: ' + title)
+  await shot('11-rx-saved')
+
+  // Library learned the new drug
+  await page.click('[data-nav="library"]')
+  await sleep(400)
+  check((await page.locator('td:has-text("Sinupret Forte")').count()) === 1, 'new drug added to library automatically')
+  await shot('12-library-drugs')
+  await page.click('[data-tab="favorites"]')
+  await sleep(300)
+  await shot('13-library-templates')
+
+  // Patient history + repeat as new
+  await page.click('[data-nav="patients"]')
+  await page.fill('#patient-search', 'أحمد')
+  await sleep(400)
+  await page.keyboard.press('Enter')
+  await page.waitForSelector('[data-repeat]')
+  const hist = await page.locator('[data-repeat]').count()
+  check(hist === 2, `patient history lists 2 prescriptions (got ${hist})`)
+  await shot('14-patient-history')
+  await page.locator('[data-repeat]').first().click()
+  await page.waitForSelector('#rx-patient-name')
+  await sleep(500)
+  check((await page.inputValue('[data-row="0"][data-field="drugName"]')) === 'Augmentin', 'repeat as new copies medicines')
+  check((await page.textContent('h3')).length > 0 && !(/\d/.test(await page.textContent('h3'))), 'repeat opens as a new (unsaved) prescription')
+  await shot('15-rx-repeat')
+}

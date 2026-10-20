@@ -21,14 +21,15 @@ export function focusNext(from: HTMLElement, container: HTMLElement | null, back
 
 /**
  * Enter behaves like Tab in forms (common in clinic software). Not inside text areas,
- * and not while an autocomplete list is open (there Enter picks the option).
+ * and not when an autocomplete option is highlighted (there Enter picks the option).
  */
 export function enterAsTab(e: KeyboardEvent<HTMLElement>, onLastField?: () => void): void {
   if (e.key !== 'Enter' || e.ctrlKey || e.altKey || e.metaKey) return
   const target = e.target as HTMLElement
   if (target instanceof HTMLTextAreaElement && !e.shiftKey) return
   if (target.tagName === 'BUTTON') return
-  if (target.getAttribute('aria-expanded') === 'true') return
+  // An autocomplete already used this Enter to pick an option.
+  if (e.defaultPrevented) return
   e.preventDefault()
   const moved = focusNext(target, e.currentTarget, e.shiftKey && !(target instanceof HTMLTextAreaElement))
   if (!moved) onLastField?.()

@@ -1,0 +1,60 @@
+.row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 10px 12px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  margin-bottom: 6px;
+  background: #fbfcfd;
+}
+
+.row[data-active] {
+  border-color: #96d8c8;
+  background: #f3fbf8;
+}
+
+.row[data-blank] {
+  background: transparent;
+  border: 1px dashed #d5dbe1;
+}
+
+.num {
+  padding-top: 22px;
+}
+
+.fields {
+  flex: 1;
+  min-width: 0;
+}
+
+.line1 {
+  display: grid;
+  grid-template-columns: 2.4fr 1fr 1fr 2fr;
+  gap: 8px;
+}
+
+.line2 {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1fr 2fr;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.label {
+  font-size: 0.72rem;
+  color: #6b7480;
+  font-weight: 600;
+  margin-bottom: 1px;
+}
+
+.drugInput {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.actions {
+  padding-top: 22px;
+  width: 92px;
+  justify-content: flex-end;
+}

@@ -58,3 +58,54 @@ export const DRUG_FORMS = [
 ]
 
 export const ROUTES = ['Oral', 'Topical', 'IM', 'IV', 'SC', 'Inhalation', 'Rectal', 'Eye', 'Ear', 'Nasal', 'Vaginal']
+
+/** Quick suggestions shown in the medicine row fields (the doctor can always type anything). */
+export const FREQUENCY_SUGGESTIONS = [
+  'once daily',
+  'twice daily',
+  'three times daily',
+  'four times daily',
+  'every 6 hours',
+  'every 8 hours',
+  'every 12 hours',
+  'once daily at night',
+  'once weekly',
+  'when needed',
+  'مرة يومياً',
+  'مرتين يومياً',
+  '3 مرات يومياً',
+  'كل 8 ساعات',
+  'كل 12 ساعة',
+  'عند اللزوم'
+]
+
+export const DURATION_SUGGESTIONS = [
+  '3 days',
+  '5 days',
+  '7 days',
+  '10 days',
+  '14 days',
+  '1 month',
+  '3 months',
+  'continuous',
+  '3 أيام',
+  '5 أيام',
+  'أسبوع',
+  'أسبوعين',
+  'شهر',
+  'مستمر'
+]
+
+export const INSTRUCTION_SUGGESTIONS = [
+  'after food',
+  'before food',
+  'with food',
+  'at bedtime',
+  'on empty stomach',
+  'بعد الأكل',
+  'قبل الأكل',
+  'مع الأكل',
+  'على الريق',
+  'قبل النوم',
+  'عند اللزوم'
+]
