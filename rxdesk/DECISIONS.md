@@ -54,3 +54,16 @@ Choices made where the brief was open, picking the simplest option for a non-tec
 - Background images are compressed to JPEG (max 2400 px) and stored inside the layout, so an exported layout file
   carries its letterhead with it. Exported layouts use the `.rxlayout` extension (JSON).
 - Undo/redo keeps the last 100 steps; a whole drag, or typing in one box, is one step.
+
+## Backup, export, security
+- A backup is a `.zip` with a consistent copy of the database (SQLite online backup) plus `manifest.json`.
+  Restore accepts that `.zip` or a raw `.db`, validates it (integrity check, schema version) and always saves a
+  `before-restore-…zip` safety copy of the current data first.
+- Automatic backup runs once per day (checked at start-up and every hour) into the chosen folder, keeping the last
+  14 (`RxDesk-auto-*.zip`; other files in the folder are never touched). If the chosen folder (e.g. a USB stick) is
+  missing, the backup goes to the default folder and the user is told.
+- "Export to Excel" writes UTF-8 CSV with a BOM so Arabic opens correctly in Excel; cells that look like formulas
+  are neutralised.
+- PIN: 4–8 digits, stored as a salted scrypt hash. While locked, the main process refuses every data request (not
+  just the UI). After 5 wrong attempts the app waits 30 seconds. A forgotten PIN can only be cleared by restoring a
+  backup made before the PIN was set (documented in the user guide) — there is no back door.

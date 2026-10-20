@@ -102,7 +102,7 @@ if (stage !== 'm2') {
   if (mod) await mod.default({ page, app, shot, check, sleep, dataDir })
 }
 
-await app.close()
+await app.close().catch(() => {})
 if (!process.env.KEEP_DATA_DIR) fs.rmSync(dataDir, { recursive: true, force: true })
 console.log(failures ? `\n${failures} FAILURE(S)` : '\nALL CHECKS PASSED')
 process.exit(failures ? 1 : 0)

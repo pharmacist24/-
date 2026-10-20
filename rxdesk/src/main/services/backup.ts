@@ -26,6 +26,7 @@ export function autoBackupName(d = new Date()): string {
 
 export async function createBackup(repo: Repo, destFile: string, appVersion: string): Promise<BackupInfo> {
   const tmp = destFile + '.tmp-db'
+  fs.mkdirSync(path.dirname(destFile), { recursive: true })
   try {
     await repo.db.backup(tmp)
     const zip = new JSZip()
@@ -40,7 +41,6 @@ export async function createBackup(repo: Repo, destFile: string, appVersion: str
     )
     zip.file('rxdesk.db', fs.readFileSync(tmp))
     const buf = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE', compressionOptions: { level: 6 } })
-    fs.mkdirSync(path.dirname(destFile), { recursive: true })
     // Write to a temp name first so a half-written file never looks like a valid backup.
     fs.writeFileSync(destFile + '.partial', buf)
     fs.renameSync(destFile + '.partial', destFile)
