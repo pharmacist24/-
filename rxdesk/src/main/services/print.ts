@@ -43,7 +43,7 @@ export async function listPrinters(win: BrowserWindow): Promise<PrinterInfo[]> {
   return printers.map((p) => ({
     name: p.name,
     displayName: p.displayName || p.name,
-    isDefault: !!(p as unknown as { isDefault?: boolean }).isDefault || p.options?.['printer-is-default'] === 'true'
+    isDefault: !!(p as unknown as { isDefault?: boolean }).isDefault || (p.options as Record<string, string> | undefined)?.['printer-is-default'] === 'true'
   }))
 }
 

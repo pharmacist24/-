@@ -1,0 +1,86 @@
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: #f4f6f9;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+.rx-nav {
+  background: #ffffff;
+}
+
+.rx-navlink {
+  border-radius: 10px;
+  padding-block: 12px;
+  font-weight: 600;
+}
+
+.rx-navlink .mantine-NavLink-label {
+  font-size: 1.02rem;
+}
+
+.rx-lock-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 10px;
+  color: #495057;
+  font-weight: 600;
+}
+
+.rx-lock-btn:hover {
+  background: #f1f3f5;
+}
+
+.rx-main {
+  height: 100vh;
+  overflow: auto;
+}
+
+.rx-page-wrap {
+  padding: 20px 24px 40px;
+  max-width: 1500px;
+  margin-inline: auto;
+}
+
+.rx-card {
+  background: #fff;
+  border: 1px solid #e3e7ec;
+  border-radius: 14px;
+  padding: 18px;
+}
+
+/* Latin text (drug names) inside RTL UI */
+.ltr {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.rx-row-table input {
+  font-size: 0.98rem;
+}
+
+.rx-click-row {
+  cursor: pointer;
+}
+
+.rx-click-row:hover {
+  background: #f1f8f6;
+}
+
+kbd.rx-kbd {
+  font-family: 'Roboto', sans-serif;
+  font-size: 0.75rem;
+  padding: 1px 5px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background: #f8f9fa;
+}
