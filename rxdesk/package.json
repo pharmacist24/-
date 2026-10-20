@@ -1,0 +1,53 @@
+{
+  "name": "rxdesk",
+  "productName": "RxDesk",
+  "version": "1.0.0",
+  "description": "RxDesk - offline prescription writing for private clinics",
+  "author": "RxDesk",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "test": "cross-env ELECTRON_RUN_AS_NODE=1 electron node_modules/vitest/vitest.mjs run",
+    "postinstall": "electron-builder install-app-deps",
+    "dist": "npm run build && electron-builder --win nsis --x64 --publish never"
+  },
+  "dependencies": {
+    "better-sqlite3": "12.11.1",
+    "jszip": "3.10.1",
+    "qrcode": "1.5.4"
+  },
+  "devDependencies": {
+    "@fontsource/amiri": "5.2.5",
+    "@fontsource/cairo": "5.2.5",
+    "@fontsource/noto-naskh-arabic": "5.2.5",
+    "@fontsource/roboto": "5.2.5",
+    "@mantine/core": "7.17.8",
+    "@mantine/hooks": "7.17.8",
+    "@mantine/modals": "7.17.8",
+    "@mantine/notifications": "7.17.8",
+    "@tabler/icons-react": "3.30.0",
+    "@types/better-sqlite3": "7.6.13",
+    "@types/node": "22.15.0",
+    "@types/qrcode": "1.5.5",
+    "@types/react": "18.3.12",
+    "@types/react-dom": "18.3.1",
+    "@vitejs/plugin-react": "4.7.0",
+    "cross-env": "7.0.3",
+    "electron": "38.8.6",
+    "electron-builder": "26.0.20",
+    "electron-vite": "4.0.1",
+    "playwright-core": "1.52.0",
+    "postcss": "8.5.3",
+    "postcss-preset-mantine": "1.17.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "typescript": "5.9.3",
+    "vite": "6.4.4",
+    "vitest": "3.2.7"
+  }
+}
