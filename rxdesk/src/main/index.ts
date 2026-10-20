@@ -12,6 +12,8 @@ app.setName('RxDesk')
 if (process.env.RXDESK_DATA_DIR) app.setPath('userData', process.env.RXDESK_DATA_DIR)
 else app.setPath('userData', path.join(app.getPath('appData'), 'RxDesk'))
 if (process.platform === 'win32') app.setAppUserModelId('com.rxdesk.app')
+// Date pickers show day/month/year (as clinics in the region expect), whatever the Windows locale.
+app.commandLine.appendSwitch('lang', 'en-GB')
 
 state.dataDir = app.getPath('userData')
 state.dbPath = path.join(state.dataDir, 'rxdesk.db')

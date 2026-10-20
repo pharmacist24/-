@@ -21,3 +21,23 @@ Choices made where the brief was open, picking the simplest option for a non-tec
   old prescription shows the same values.
 - Arabic search is normalised (أ/إ/آ → ا, ة → ه, ى → ي, diacritics removed, Arabic digits → Latin) so
   "احمد" finds "أحمد". Words can be typed in any order.
+
+## Printing
+- **One engine for designer, preview, print and PDF** (`src/shared/layout/engine.ts`). The renderer builds the final
+  HTML (fonts embedded as data URLs, no scripts); the main process loads exactly that HTML into a hidden window and
+  calls `webContents.print()` or `printToPDF()`. The preview shows the same HTML in an iframe.
+- **Multi-page medicines**: each medicine is measured with the real fonts in a hidden frame, then medicines are
+  split so the block never overflows its box. Continuation pages repeat the whole layout (letterhead, patient
+  name…). Elements default to "all pages", except advice, lab tests, next visit, signature and QR code which print
+  on the last page only (each element can be changed in the designer).
+- **Empty fields**: diagnosis, advice, lab tests, next visit and clinic details are hidden when empty (no lonely
+  labels). Patient fields (name, age, sex, weight) keep their label so the doctor can hand-write a value.
+- **Long text** is never cut off: text may run past its box so nothing is silently lost; the preview shows it.
+- **Printer calibration** (X/Y offset) only affects real printing. Preview and PDF show the page as designed.
+- **Preview = print**: the preview never shows the letterhead background unless the layout is set to print it.
+- **Printing always uses the saved prescription**, so a reprint is identical to the original. Print and PDF save
+  the prescription first if needed.
+- The "Rx" symbol is drawn with bundled fonts (R + subscript x) instead of the ℞ character, which most fonts lack.
+- Mixed text: drug lines are always left-to-right; instructions, notes and patient fields use automatic direction
+  per paragraph and `<bdi>` isolation, so Arabic and English never scramble each other.
+- Date inputs use day/month/year regardless of the Windows locale; printed dates are dd/mm/yyyy.
