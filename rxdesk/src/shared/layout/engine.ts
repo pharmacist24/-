@@ -38,7 +38,8 @@ export function fontStack(f: FontFamily): string {
   return stack.map((x) => `'${x}'`).join(', ') + ', sans-serif'
 }
 
-function styleOf(el: LayoutElement): string {
+/** Inline style (position, size, font) of an element: shared by designer and print. */
+export function elementStyle(el: LayoutElement): string {
   const s = el.style
   return [
     `left:${n(el.x)}mm`,
@@ -60,7 +61,7 @@ function safeColor(c: string | undefined, fallback = '#111111'): string {
   return /^(#[0-9a-f]{3,8}|transparent|rgba?\([\d\s.,%]+\))$/i.test(c.trim()) ? c.trim() : fallback
 }
 
-function dirAttr(el: LayoutElement): string {
+export function dirAttr(el: LayoutElement): string {
   return el.style.direction === 'auto' ? 'auto' : el.style.direction
 }
 
@@ -318,7 +319,7 @@ export function isOnPage(el: LayoutElement, page: number, pages: number): boolea
 export function renderElement(el: LayoutElement, d: PrintData, ctx: ElementContext): string {
   const content = renderElementContent(el, d, ctx)
   if (!content) return ''
-  return `<div class="rx-el rx-el-${el.type}" dir="${dirAttr(el)}" style="${styleOf(el)}">${content}</div>`
+  return `<div class="rx-el rx-el-${el.type}" dir="${dirAttr(el)}" style="${elementStyle(el)}">${content}</div>`
 }
 
 // ------------------------------------------------------------------ document
@@ -416,7 +417,7 @@ export function renderDocument(layout: Layout, d: PrintData, opts: RenderOptions
   const all = d.rx.items.map((_, i) => i)
   if (opts.mode === 'measure') {
     if (!med) return htmlShell(layout, '', opts)
-    const style = styleOf(med).replace(/height:[^;]+/, 'height:auto').replace(/top:[^;]+/, 'top:0').replace(/left:[^;]+/, 'left:0')
+    const style = elementStyle(med).replace(/height:[^;]+/, 'height:auto').replace(/top:[^;]+/, 'top:0').replace(/left:[^;]+/, 'left:0')
     const body = `<div class="rx-page" style="height:auto;overflow:visible"><div class="rx-el rx-el-medicines" id="rx-measure" dir="${dirAttr(med)}" style="${style}">${medicinesHtml(med, d, all)}</div></div>`
     return htmlShell(layout, body, opts)
   }

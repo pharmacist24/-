@@ -41,3 +41,16 @@ Choices made where the brief was open, picking the simplest option for a non-tec
 - Mixed text: drug lines are always left-to-right; instructions, notes and patient fields use automatic direction
   per paragraph and `<bdi>` isolation, so Arabic and English never scramble each other.
 - Date inputs use day/month/year regardless of the Windows locale; printed dates are dd/mm/yyyy.
+
+## Print Format Designer
+- The canvas shows each element using the exact HTML the printer gets (`renderElement`), with a transparent
+  "hit box" on top for dragging, so designer and print cannot drift apart (an e2e test compares positions).
+- Snapping: alignment guides (page edges/centre, margins, other elements' edges and centres) win over the grid.
+  Hold **Alt** while dragging to place freely.
+- Changing the paper size scales element positions and sizes proportionally; font sizes stay the same.
+- Only one medicines block per layout (it is the block that flows onto extra pages). Clicking "Medicines" in the
+  palette when one exists just selects it.
+- Margins are guides for alignment/snapping only; they never clip content.
+- Background images are compressed to JPEG (max 2400 px) and stored inside the layout, so an exported layout file
+  carries its letterhead with it. Exported layouts use the `.rxlayout` extension (JSON).
+- Undo/redo keeps the last 100 steps; a whole drag, or typing in one box, is one step.
