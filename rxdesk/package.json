@@ -3,7 +3,10 @@
   "productName": "RxDesk",
   "version": "1.0.0",
   "description": "RxDesk - offline prescription writing for private clinics",
-  "author": "RxDesk",
+  "author": {
+    "name": "RxDesk",
+    "email": "support@rxdesk.local"
+  },
   "license": "UNLICENSED",
   "private": true,
   "main": "out/main/index.js",

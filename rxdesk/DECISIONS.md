@@ -67,3 +67,26 @@ Choices made where the brief was open, picking the simplest option for a non-tec
 - PIN: 4–8 digits, stored as a salted scrypt hash. While locked, the main process refuses every data request (not
   just the UI). After 5 wrong attempts the app waits 30 seconds. A forgotten PIN can only be cleared by restoring a
   backup made before the PIN was set (documented in the user guide) — there is no back door.
+
+## Packaging
+- electron-builder NSIS, `oneClick: true`, `perMachine: false`: per-user install in `%LOCALAPPDATA%\Programs\rxdesk`
+  with no admin prompt, Desktop + Start Menu shortcuts, starts after install, uninstaller registered under the
+  current user. `deleteAppDataOnUninstall: false` so patient data is never removed.
+- No auto-update and no publish target (the app is offline-only; updates = run a newer installer).
+- No code signing (paid certificate). SmartScreen may warn once; the guide explains "More info → Run anyway".
+- Building on Linux/macOS: `scripts/after-pack.cjs` downloads the official Windows prebuilt of better-sqlite3 for the
+  bundled Electron ABI and fails the build if the packaged module is not a Windows DLL.
+- Keyboard: Enter moves to the next field (common in clinic software); global Ctrl+N/F1 new prescription,
+  Ctrl+F/F2 patients; Ctrl+S / Ctrl+P on the prescription screen.
+
+## How the installer was verified (in a Linux sandbox, with Wine 9)
+- Silent install (`/S`): files in `%LOCALAPPDATA%\Programs\rxdesk`, Desktop and Start-Menu shortcuts, uninstall entry
+  in HKCU (so no admin rights). Exit code 0.
+- The installed `RxDesk.exe` started (log shows `platform: win32`), created `%APPDATA%\RxDesk\rxdesk.db`, applied the
+  migration and seeded 22 drugs + 2 layouts; reading the database through the bundled Windows SQLite module works.
+- Silent uninstall: shortcuts and uninstall entry removed, program files removed, `%APPDATA%\RxDesk` kept;
+  reinstalling finds the same data.
+- Limits of that test: Wine cannot display Chromium windows here, so the UI itself was verified with the Linux build
+  (same code) through the Playwright e2e suite. Wine's `tasklist` makes the installer's "RxDesk is running" check
+  misfire, so the Wine test used a build with that check disabled (`scripts/wine-test/skip-running-check.nsh`); the
+  real installer keeps the check. Under Wine the uninstaller left an empty program folder.

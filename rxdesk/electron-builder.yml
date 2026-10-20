@@ -1,0 +1,42 @@
+# Windows installer: one file, per-user (no admin rights), one click.
+appId: com.rxdesk.app
+productName: RxDesk
+copyright: Copyright © 2026 RxDesk
+directories:
+  output: dist
+  buildResources: build
+files:
+  - out/**
+  - resources/**
+  - package.json
+  - "!scripts/**"
+asar: true
+asarUnpack:
+  - "**/*.node"
+npmRebuild: true
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: build/icon.ico
+  executableName: RxDesk
+  legalTrademarks: RxDesk
+  # No code-signing certificate (would be a paid service). Windows SmartScreen may show
+  # "Windows protected your PC" the first time: click "More info" > "Run anyway".
+  signAndEditExecutable: true
+nsis:
+  oneClick: true
+  perMachine: false
+  allowElevation: false
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: RxDesk
+  runAfterFinish: true
+  # Patient data lives in %APPDATA%\RxDesk and must survive uninstall / reinstall.
+  deleteAppDataOnUninstall: false
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  uninstallDisplayName: RxDesk
+  artifactName: RxDesk-Setup-${version}.exe
+publish: null
+afterPack: scripts/after-pack.cjs
