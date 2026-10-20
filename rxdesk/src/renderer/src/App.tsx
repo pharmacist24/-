@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { AppShell, Box, Center, DirectionProvider, Loader, MantineProvider, NavLink, Stack, Text, UnstyledButton } from '@mantine/core'
 import { ModalsProvider } from '@mantine/modals'
+import { useHotkeys } from '@mantine/hooks'
 import { Notifications, notifications } from '@mantine/notifications'
 import {
   IconChartBar,
@@ -67,7 +68,7 @@ export default function App() {
     <DirectionProvider initialDirection={dir} detectDirection={false}>
       <MantineProvider theme={theme} defaultColorScheme="light">
         <ModalsProvider>
-          <Notifications position="top-center" />
+          <Notifications position="bottom-center" />
           {error ? (
             <Center h="100vh">
               <Text c="red">{error}</Text>
@@ -107,6 +108,17 @@ const NAV: { name: Route['name']; icon: typeof IconUsers; label: Parameters<Retu
 function Shell({ onLocked }: { onLocked: () => void }) {
   const { t, route, navigate, settings, profile } = useApp()
   const active = route.name === 'patient' ? 'patients' : route.name
+
+  // Global shortcuts (also work while typing). The prescription screen adds Ctrl+S / Ctrl+P.
+  useHotkeys(
+    [
+      ['mod+N', () => route.name !== 'rx' && navigate({ name: 'rx' })],
+      ['mod+F', () => navigate({ name: 'patients' })],
+      ['F1', () => navigate({ name: 'rx' })],
+      ['F2', () => navigate({ name: 'patients' })]
+    ],
+    []
+  )
 
   return (
     <AppShell navbar={{ width: 232, breakpoint: 0 }} padding={0}>

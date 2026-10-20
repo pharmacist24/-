@@ -283,7 +283,7 @@ export default function DesignerScreen() {
       <style>{LAYOUT_CSS}</style>
       <div className={classes.toolbar}>
         <Select
-          w={240}
+          w={210}
           size="sm"
           value={currentId ? String(currentId) : null}
           data={records.map((r) => ({ value: String(r.id), label: r.name + (r.isDefault ? ' ★' : '') }))}
@@ -294,19 +294,16 @@ export default function DesignerScreen() {
           aria-label={t('d.layouts')}
           id="layout-select"
         />
-        {current?.isDefault ? (
-          <Badge color="yellow" variant="light" leftSection={<IconStar size={12} />}>
-            {t('d.isDefault')}
-          </Badge>
-        ) : null}
         {dirty && (
           <Badge color="orange" variant="light">
             {t('d.unsaved')}
           </Badge>
         )}
-        <Button size="sm" variant="default" leftSection={<IconPlus size={16} />} onClick={() => confirmDiscard(() => { setNewName(''); setNewOpen(true) })} id="new-layout">
-          {t('d.newLayout')}
-        </Button>
+        <Tooltip label={t('d.newLayout')}>
+          <ActionIcon variant="default" size="lg" onClick={() => confirmDiscard(() => { setNewName(''); setNewOpen(true) })} id="new-layout">
+            <IconPlus size={18} />
+          </ActionIcon>
+        </Tooltip>
         <Divider orientation="vertical" />
         <Tooltip label={t('c.undo') + ' (Ctrl+Z)'}>
           <ActionIcon variant="default" size="lg" disabled={!h.canUndo} onClick={h.undo} id="undo">
@@ -330,7 +327,7 @@ export default function DesignerScreen() {
         <ActionIcon variant="default" size="lg" onClick={() => setZoom((z) => Math.min(4, z * 1.15))}>
           <IconZoomIn size={18} />
         </ActionIcon>
-        <Button size="sm" variant="subtle" onClick={() => fitZoom(layout)}>
+        <Button size="sm" variant="subtle" px={6} onClick={() => fitZoom(layout)}>
           {t('d.fitZoom')}
         </Button>
         <div style={{ flex: 1 }} />

@@ -1,5 +1,6 @@
 // End-to-end walkthrough of the built app (run `npm run build` first).
-// Usage: xvfb-run -a node scripts/e2e.mjs [stage]
+// Usage: node scripts/e2e.mjs <m2|m3|m4|m5|m6|m7>   (on Linux without a display: xvfb-run -a node …)
+// Every stage starts from a fresh data folder, runs the wizard + patient checks, then its own checks.
 // Screenshots are written to test-output/. Uses a throw-away data folder.
 import { _electron as electron } from 'playwright-core'
 import fs from 'fs'
@@ -9,7 +10,7 @@ import path from 'path'
 const out = path.resolve('test-output')
 fs.mkdirSync(out, { recursive: true })
 const dataDir = process.env.KEEP_DATA_DIR || fs.mkdtempSync(path.join(os.tmpdir(), 'rxdesk-e2e-'))
-const stage = process.argv[2] || 'all'
+const stage = process.argv[2] || 'm2'
 const lang = process.env.E2E_LANG || 'ar'
 
 let failures = 0
@@ -85,7 +86,7 @@ await sleep(300)
 await shot('07-patient-detail')
 check((await page.textContent('h2')).includes('منى سعيد'), 'new patient detail page opened')
 
-if (stage === 'm2' || stage === 'all') {
+if (stage === 'm2') {
   await page.click('[data-nav="settings"]')
   await sleep(300)
   await shot('08-settings-clinic')
@@ -95,11 +96,8 @@ if (stage === 'm2' || stage === 'all') {
 }
 
 if (stage !== 'm2') {
-  const mod = await import(`./e2e-${stage === 'all' ? 'rest' : stage}.mjs`).catch((e) => {
-    if (stage !== 'all') throw e
-    return null
-  })
-  if (mod) await mod.default({ page, app, shot, check, sleep, dataDir })
+  const mod = await import(`./e2e-${stage}.mjs`)
+  await mod.default({ page, app, shot, check, sleep, dataDir })
 }
 
 await app.close().catch(() => {})

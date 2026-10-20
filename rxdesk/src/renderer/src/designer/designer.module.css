@@ -11,7 +11,9 @@
   padding: 8px 14px;
   background: #fff;
   border-bottom: 1px solid #e3e7ec;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  white-space: nowrap;
 }
 
 .body {
