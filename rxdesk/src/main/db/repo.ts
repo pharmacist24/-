@@ -325,6 +325,23 @@ export class Repo {
     return rowToDrug(this.db.prepare('SELECT * FROM drugs WHERE id = ?').get(res.lastInsertRowid) as Row)
   }
 
+  /** Applies planned Excel rows (new drugs inserted, existing ones updated) in one transaction. */
+  importDrugs(rows: (DrugInput & { status?: string })[]): { added: number; updated: number } {
+    let added = 0
+    let updated = 0
+    this.db.transaction(() => {
+      for (const r of rows) {
+        if (r.status === 'same') continue
+        const { status: _s, ...d } = r
+        const cur = this.getDrugByName(d.name)
+        this.saveDrug({ ...d, id: cur?.id })
+        if (cur) updated++
+        else added++
+      }
+    })()
+    return { added, updated }
+  }
+
   deleteDrug(id: number): void {
     this.db.prepare('DELETE FROM drugs WHERE id = ?').run(id)
   }

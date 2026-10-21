@@ -117,3 +117,12 @@ Choices made where the brief was open, picking the simplest option for a non-tec
 - Safety helpers: allergy conflicts per option (same matcher as the medicine rows, including drug classes); for
   children (<12 y by birth date) child options/diagnoses are listed first and adult options are marked "adult dose".
 - Older installs: the diagnosis box and the suggestions panel are switched on once when upgrading.
+
+## Drugs from / to Excel
+- Real `.xlsx` via **exceljs** (free, offline, main process only); `.csv` (Excel "CSV UTF-8", comma or semicolon) is
+  also accepted on import.
+- Columns are found by header words in English or Arabic, in any order; a sheet without a recognised header uses the
+  template's column order. Rows without a drug name are skipped and reported.
+- Import is two-step (preview, then Import). A drug that already exists (same name, any case) keeps its spelling and
+  is updated only in the cells filled in the sheet; repeated names in the file: the last row wins.
+- The export includes "times used" for information; re-importing an export changes nothing.

@@ -130,6 +130,11 @@ rxdesk/
 The designer canvas renders every element with the same engine function, so the designer, the preview and the paper
 match (an e2e test compares element positions between the designer and the preview).
 
+## Dependencies
+
+Runtime: `better-sqlite3` (database), `jszip` (backups), `qrcode` (QR codes), `exceljs` (drug import/export
+to Excel). Everything else is bundled into the app at build time. No dependency makes network requests.
+
 ## Privacy
 
 100% offline: no network requests, no telemetry, no accounts. Fonts are bundled; the window cannot navigate to

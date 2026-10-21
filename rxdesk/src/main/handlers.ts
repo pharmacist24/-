@@ -9,6 +9,17 @@ import { createBackup, listAutoBackups, manualBackupName, prepareRestore } from 
 import { hashPin, isValidPin, PinThrottle, verifyPin } from './services/pin'
 import { htmlToPdf, listPrinters, printHtml } from './services/print'
 import { toCsv } from './services/csv'
+import { planImport, readDrugFile, TEMPLATE_ROWS, writeDrugsXlsx } from './services/drugsExcel'
+
+/** Reads an Excel/CSV drug sheet; unreadable files become a friendly BAD_FILE error. */
+async function readDrugs(file: string) {
+  try {
+    return await readDrugFile(file)
+  } catch (e) {
+    log.warn('Could not read drug sheet', e)
+    throw new AppError('BAD_FILE', 'This file could not be read')
+  }
+}
 import { formatAge, genderText, todayIso } from '@shared/text'
 import { log, getLogFile } from './logger'
 import { state, replaceDatabase, runAutoBackup, autoBackupFolder } from './state'
@@ -173,6 +184,42 @@ export const handlers: Handlers = {
     },
     async delete(id) {
       repo().deleteDrug(id)
+    },
+    async exportXlsx() {
+      const res = await dialog.showSaveDialog(win(), {
+        defaultPath: path.join(app.getPath('documents'), `RxDesk-drugs-${todayIso()}.xlsx`),
+        filters: [{ name: 'Excel', extensions: ['xlsx'] }]
+      })
+      if (res.canceled || !res.filePath) return null
+      await writeDrugsXlsx(repo().listDrugs(), res.filePath, { withUseCount: true })
+      return res.filePath
+    },
+    async templateXlsx() {
+      const res = await dialog.showSaveDialog(win(), {
+        defaultPath: path.join(app.getPath('documents'), 'RxDesk-drugs-template.xlsx'),
+        filters: [{ name: 'Excel', extensions: ['xlsx'] }]
+      })
+      if (res.canceled || !res.filePath) return null
+      await writeDrugsXlsx(TEMPLATE_ROWS, res.filePath)
+      return res.filePath
+    },
+    async previewImport() {
+      const res = await dialog.showOpenDialog(win(), {
+        properties: ['openFile'],
+        filters: [{ name: 'Excel / CSV', extensions: ['xlsx', 'csv'] }]
+      })
+      if (res.canceled || !res.filePaths[0]) return null
+      const file = res.filePaths[0]
+      const read = await readDrugs(file)
+      const plan = planImport(read.rows, (n) => repo().getDrugByName(n))
+      return { file, newCount: plan.newCount, updateCount: plan.updateCount, sameCount: plan.sameCount, duplicates: plan.duplicates, skipped: read.skipped, sample: plan.rows.slice(0, 50) }
+    },
+    async applyImport(file) {
+      const read = await readDrugs(file)
+      const plan = planImport(read.rows, (n) => repo().getDrugByName(n))
+      const r = repo().importDrugs(plan.rows)
+      log.info('Drugs imported from Excel', { file, ...r })
+      return r
     }
   },
 

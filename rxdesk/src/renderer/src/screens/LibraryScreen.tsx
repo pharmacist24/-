@@ -5,6 +5,7 @@ import {
   Badge,
   Button,
   Group,
+  Menu,
   Modal,
   SimpleGrid,
   Stack,
@@ -16,7 +17,8 @@ import {
   Title
 } from '@mantine/core'
 import { modals } from '@mantine/modals'
-import { IconStethoscope, IconArrowDown, IconArrowUp, IconEdit, IconPill, IconPlus, IconSearch, IconTemplate, IconTextCaption, IconTrash } from '@tabler/icons-react'
+import { IconChevronDown, IconDownload, IconFileExport, IconFileImport, IconFileSpreadsheet, IconStethoscope, IconArrowDown, IconArrowUp, IconEdit, IconPill, IconPlus, IconSearch, IconTemplate, IconTextCaption, IconTrash } from '@tabler/icons-react'
+import type { DrugImportPreview } from '@shared/api'
 import type { DosePhrase, Drug, DrugInput, Favorite, FavoriteInput, MedicineItem } from '@shared/types'
 import { DRUG_FORMS, DURATION_SUGGESTIONS, FREQUENCY_SUGGESTIONS, INSTRUCTION_SUGGESTIONS, ROUTES } from '@shared/defaults'
 import { normalizeForSearch } from '@shared/text'
@@ -105,6 +107,50 @@ function DrugsTab() {
 
   const set = (k: keyof DrugInput) => (v: string) => setEditing((d) => (d ? { ...d, [k]: v } : d))
 
+  // ---- Excel
+  const [preview, setPreview] = useState<DrugImportPreview | null>(null)
+  const [importing, setImporting] = useState(false)
+  const exportXlsx = async () => {
+    try {
+      const p = await api.drugs.exportXlsx()
+      if (p) notifyOk(t('xl.exported', { path: '\u2066' + p + '\u2069' }))
+    } catch (e) {
+      notifyError(e, t)
+    }
+  }
+  const downloadTemplate = async () => {
+    try {
+      const p = await api.drugs.templateXlsx()
+      if (p) notifyOk(t('xl.templateSaved', { path: '\u2066' + p + '\u2069' }))
+    } catch (e) {
+      notifyError(e, t)
+    }
+  }
+  const startImport = async () => {
+    try {
+      const p = await api.drugs.previewImport()
+      if (p) setPreview(p)
+    } catch (e) {
+      notifyError(e, t)
+    }
+  }
+  const applyImport = async () => {
+    if (!preview) return
+    setImporting(true)
+    try {
+      const r = await api.drugs.applyImport(preview.file)
+      setPreview(null)
+      notifyOk(t('xl.done', { a: r.added, u: r.updated }))
+      load()
+    } catch (e) {
+      notifyError(e, t)
+    } finally {
+      setImporting(false)
+    }
+  }
+  const statusBadge = (st: 'new' | 'update' | 'same') =>
+    st === 'new' ? <Badge color="teal" tt="none">{t('xl.statusNew')}</Badge> : st === 'update' ? <Badge color="orange" tt="none">{t('xl.statusUpdate')}</Badge> : <Badge color="gray" variant="light" tt="none">{t('xl.statusSame')}</Badge>
+
   return (
     <div className="rx-card">
       <Group justify="space-between" mb="md">
@@ -112,9 +158,30 @@ function DrugsTab() {
           <TextInput leftSection={<IconSearch size={18} />} placeholder={t('lib.searchDrugs')} value={q} onChange={(e) => setQ(e.currentTarget.value)} w={320} />
           <Text c="dimmed">{t('lib.drugCount', { n: drugs.length })}</Text>
         </Group>
-        <Button leftSection={<IconPlus size={18} />} onClick={() => setEditing({ ...EMPTY_DRUG })} id="add-drug">
-          {t('lib.addDrug')}
-        </Button>
+        <Group gap="xs">
+          <Menu position="bottom-end">
+            <Menu.Target>
+              <Button variant="default" leftSection={<IconFileSpreadsheet size={18} />} rightSection={<IconChevronDown size={14} />} data-menu="excel">
+                {t('xl.excel')}
+              </Button>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Item leftSection={<IconFileImport size={16} />} onClick={startImport} id="xl-import">
+                {t('xl.import')}
+              </Menu.Item>
+              <Menu.Item leftSection={<IconFileExport size={16} />} onClick={exportXlsx} id="xl-export">
+                {t('xl.export')}
+              </Menu.Item>
+              <Menu.Divider />
+              <Menu.Item leftSection={<IconDownload size={16} />} onClick={downloadTemplate} id="xl-template">
+                {t('xl.template')}
+              </Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
+          <Button leftSection={<IconPlus size={18} />} onClick={() => setEditing({ ...EMPTY_DRUG })} id="add-drug">
+            {t('lib.addDrug')}
+          </Button>
+        </Group>
       </Group>
       <Table highlightOnHover verticalSpacing="xs">
         <Table.Thead>
@@ -185,6 +252,72 @@ function DrugsTab() {
               </Button>
               <Button onClick={save} disabled={!editing.name.trim()} id="drug-save">
                 {t('c.save')}
+              </Button>
+            </Group>
+          </Stack>
+        )}
+      </Modal>
+      <Modal opened={!!preview} onClose={() => setPreview(null)} size={1000} title={<Text fw={700}>{t('xl.previewTitle')}</Text>}>
+        {preview && (
+          <Stack id="xl-preview">
+            <Text fw={700} fz="lg" data-xl-summary>
+              {t('xl.summary', { n: preview.newCount, u: preview.updateCount, s: preview.sameCount })}
+            </Text>
+            <Text fz="sm" c="dimmed">
+              {t('xl.rule')}
+            </Text>
+            {preview.skipped.length > 0 && (
+              <Text fz="sm" c="orange.8">
+                {t('xl.skipped', { n: preview.skipped.length, rows: preview.skipped.slice(0, 10).join(', ') + (preview.skipped.length > 10 ? '…' : '') })}
+              </Text>
+            )}
+            {preview.duplicates > 0 && (
+              <Text fz="sm" c="orange.8">
+                {t('xl.duplicates', { n: preview.duplicates })}
+              </Text>
+            )}
+            <div style={{ maxHeight: '50vh', overflow: 'auto' }}>
+              <Table verticalSpacing={4} fz="sm" stickyHeader>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th />
+                    <Table.Th>{t('rx.drug')}</Table.Th>
+                    <Table.Th>{t('rx.form')}</Table.Th>
+                    <Table.Th>{t('rx.strength')}</Table.Th>
+                    <Table.Th>{t('rx.dose')}</Table.Th>
+                    <Table.Th>{t('rx.frequency')}</Table.Th>
+                    <Table.Th>{t('rx.duration')}</Table.Th>
+                    <Table.Th>{t('rx.instructions')}</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {preview.sample.map((r, i) => (
+                    <Table.Tr key={i}>
+                      <Table.Td>{statusBadge(r.status)}</Table.Td>
+                      <Table.Td dir="ltr" style={{ textAlign: 'start', fontWeight: 600 }}>{r.name}</Table.Td>
+                      <Table.Td dir="ltr" style={{ textAlign: 'start' }}>{r.form}</Table.Td>
+                      <Table.Td dir="ltr" style={{ textAlign: 'start' }}>{r.strength}</Table.Td>
+                      <Table.Td style={{ unicodeBidi: 'plaintext' }}>{r.dose}</Table.Td>
+                      <Table.Td style={{ unicodeBidi: 'plaintext' }}>{r.frequency}</Table.Td>
+                      <Table.Td style={{ unicodeBidi: 'plaintext' }}>{r.duration}</Table.Td>
+                      <Table.Td style={{ unicodeBidi: 'plaintext' }}>{r.instructions}</Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </div>
+            {preview.sample.length < preview.newCount + preview.updateCount + preview.sameCount && (
+              <Text fz="xs" c="dimmed">
+                {t('xl.showing', { n: preview.sample.length })}
+              </Text>
+            )}
+            {preview.newCount + preview.updateCount === 0 && <Text c="dimmed">{t('xl.nothing')}</Text>}
+            <Group justify="flex-end">
+              <Button variant="default" onClick={() => setPreview(null)}>
+                {t('c.cancel')}
+              </Button>
+              <Button onClick={applyImport} loading={importing} disabled={preview.newCount + preview.updateCount === 0} id="xl-apply">
+                {t('xl.importBtn')}
               </Button>
             </Group>
           </Stack>

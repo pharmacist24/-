@@ -31,6 +31,17 @@ export interface SetupPayload {
   samplePatients: boolean
 }
 
+export interface DrugImportPreview {
+  file: string
+  newCount: number
+  updateCount: number
+  sameCount: number
+  duplicates: number
+  /** Spreadsheet row numbers skipped because the drug name is empty. */
+  skipped: number[]
+  sample: (DrugInput & { status: 'new' | 'update' | 'same' })[]
+}
+
 export interface RestoreCandidate {
   path: string
   version: number
@@ -77,6 +88,10 @@ export interface Api {
     list(): Promise<Drug[]>
     save(d: DrugInput): Promise<Drug>
     delete(id: number): Promise<void>
+    exportXlsx(): Promise<string | null>
+    templateXlsx(): Promise<string | null>
+    previewImport(): Promise<DrugImportPreview | null>
+    applyImport(file: string): Promise<{ added: number; updated: number }>
   }
   phrases: {
     list(): Promise<DosePhrase[]>

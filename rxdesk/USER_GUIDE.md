@@ -38,6 +38,13 @@
 - إذا كان المريض لديه حساسية من دواء في الخيار يظهر تحذير أحمر. للأطفال تظهر خيارات الأطفال أولاً (الجرعات لكل كجم — احسبها حسب الوزن).
 - هذه اقتراحات فقط، والطبيب يراجع كل دواء وجرعة. يمكنك تعديل القائمة من **الأدوية والقوالب ← التشخيصات** (تعديل، إضافة تشخيص خاص بك، إخفاء، أو استعادة القائمة الأصلية).
 
+### إضافة الأدوية من ملف إكسل
+1. من **الأدوية والقوالب ← مكتبة الأدوية** اضغط **إكسل ← تحميل نموذج فارغ**.
+2. اكتب في كل صف: اسم الدواء، الشكل، التركيز، الجرعة، عدد المرات، المدة، الطريقة، التعليمات (اسم الدواء فقط مطلوب). يمكن أن تكون العناوين بالعربي أو الإنجليزي وبأي ترتيب.
+3. اضغط **إكسل ← استيراد من إكسل** واختر الملف. ستظهر معاينة بعدد الأدوية الجديدة والتي سيتم تحديثها، ثم اضغط **استيراد**.
+4. الأدوية الموجودة تُحدَّث فقط في الخانات المكتوبة، والخانات الفارغة لا تمسح شيئاً.
+5. **إكسل ← تصدير إلى إكسل** يحفظ كل مكتبة الأدوية في ملف إكسل.
+
 ## ٥. المرضى
 - ابحث بالاسم (بأي ترتيب للكلمات، "احمد" تجد "أحمد") أو بجزء من رقم التليفون.
 - افتح المريض لترى بياناته وكل روشتاته السابقة:
@@ -131,6 +138,15 @@ RxDesk works completely offline. No data ever leaves the computer.
   first (doses are per kg — calculate them for the patient's weight).
 - These are suggestions only; the doctor reviews every drug and dose. Edit the list in **Drugs & templates →
   Diagnoses** (edit, add your own, hide, or restore the built-in list).
+
+### Adding drugs from an Excel sheet
+1. In **Drugs & templates → Drug library** click **Excel → Download empty template**.
+2. Fill one drug per row: name, form, strength, dose, frequency, duration, route, instructions (only the name is
+   required). Headers may be English or Arabic, in any order.
+3. Click **Excel → Import from Excel** and pick the file. A preview shows how many drugs are new or will be updated;
+   click **Import**.
+4. Existing drugs are only updated in the cells you filled in; empty cells never erase anything.
+5. **Excel → Export to Excel** saves your whole drug library as an Excel file.
 
 ## 5. Patients
 - Search by name (any word order) or part of the phone number.
