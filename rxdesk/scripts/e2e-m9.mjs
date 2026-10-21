@@ -1,0 +1,85 @@
+// Diagnoses as chips + treatment suggestion panel + Library → Diagnoses.
+export default async function ({ page, shot, check, sleep }) {
+  const pickPatient = async (q) => {
+    await page.click('[data-nav="rx"]')
+    await page.waitForSelector('#patient-picker')
+    await page.fill('#patient-picker', q)
+    await sleep(400)
+    await page.keyboard.press('Enter')
+    await page.waitForSelector('#rx-patient-name')
+  }
+  const addDx = async (text) => {
+    await page.click('#rx-diagnosis')
+    await page.keyboard.type(text, { delay: 30 })
+    await sleep(500)
+    await page.keyboard.press('Enter')
+    await sleep(400)
+  }
+
+  // Adult, allergic to penicillin
+  await pickPatient('أحمد')
+  check((await page.locator('#rx-diagnosis').count()) === 1, 'diagnosis box shown in simple mode')
+  await addDx('tonsil')
+  const pills = await page.locator('.mantine-Pill-label').allTextContents()
+  check(pills.includes('Acute bacterial tonsillitis'), 'Enter adds the adult diagnosis first for an adult: ' + pills.join(' | '))
+  await page.waitForSelector('#treatment-panel')
+  const opts = await page.locator('[data-condition="strep_tonsillitis"]').evaluateAll((els) => els.map((e) => e.getAttribute('data-option')))
+  check(opts[0] !== 'Child (dose by weight)' && opts.includes('Penicillin allergy'), 'panel lists the options, child option last for an adult: ' + opts.join(', '))
+  const first = page.locator('[data-condition="strep_tonsillitis"][data-option="First line"]')
+  check((await first.locator('[data-option-allergy]').count()) === 1, 'amoxicillin option flagged for the penicillin-allergic patient')
+  await page.locator('[data-condition="strep_tonsillitis"][data-option="Penicillin allergy"] [data-add-option]').click()
+  await sleep(300)
+  check((await page.inputValue('[data-row="0"][data-field="drugName"]')) === 'Azithromycin', 'Add inserts the option medicines')
+  check((await page.inputValue('#rx-notes')).includes('غرغرة') === false, 'advice only from the chosen option')
+
+  // Second diagnosis in Arabic
+  await addDx('ضغط')
+  const pills2 = await page.locator('.mantine-Pill-label').allTextContents()
+  check(pills2.includes('Essential hypertension'), 'Arabic search adds a second diagnosis: ' + pills2.join(' | '))
+  await page.waitForSelector('[data-condition="hypertension"]')
+  check(true, 'second diagnosis shows its own treatment options')
+  await page.locator('[data-condition="hypertension"][data-option="First line"] [data-add-option]').click()
+  await sleep(300)
+  check((await page.locator('[data-med-row]').count()) === 4, 'medicines from both diagnoses (3 + blank row)')
+  check((await page.inputValue('#rx-notes')).includes('الملح'), 'advice from the option filled the empty advice box')
+  await shot('70-dx-panel')
+  await page.keyboard.press('Control+s')
+  await sleep(700)
+  await page.click('#rx-preview')
+  await page.waitForSelector('#preview-frame')
+  await sleep(1200)
+  check((await page.frameLocator('#preview-frame').locator('text=Acute bacterial tonsillitis + Essential hypertension').count()) === 1, 'printout shows both diagnoses')
+  await page.keyboard.press('Escape')
+
+  // Child: child option first, adult options flagged
+  await pickPatient('يوسف')
+  await addDx('tonsil')
+  const pills3 = await page.locator('.mantine-Pill-label').allTextContents()
+  check(pills3.includes('Tonsillitis in a child'), 'Enter adds the child diagnosis first for a child: ' + pills3.join(' | '))
+  await addDx('J03.9')
+  await page.waitForSelector('[data-condition="strep_tonsillitis"]')
+  const kidOpts = await page.locator('[data-condition="strep_tonsillitis"]').evaluateAll((els) => els.map((e) => e.getAttribute('data-option')))
+  check(kidOpts[0] === 'Child (dose by weight)', 'child option listed first for a 6-year-old: ' + kidOpts.join(', '))
+  check((await page.locator('[data-condition="strep_tonsillitis"][data-option="First line"]').textContent()).includes('جرعة كبار'), 'adult option marked "adult dose" for a child')
+  await shot('71-dx-child')
+
+  // Library → Diagnoses: edit an option, see it in the panel
+  await page.click('[data-nav="library"]')
+  await page.click('button:has-text("خروج بدون حفظ")') // unsaved prescription prompt
+  await page.click('[data-tab="conditions"]')
+  await sleep(400)
+  await shot('72-library-diagnoses')
+  await page.fill('#condition-search', 'migraine')
+  await sleep(200)
+  await page.click('[data-condition-row="migraine"]')
+  await page.waitForSelector('#condition-name-en')
+  await page.locator('[data-edit-option="0"] [data-row="0"][data-field="dose"]').fill('2 tablets')
+  await page.click('#condition-save')
+  await sleep(500)
+  await pickPatient('فاطمة')
+  await addDx('migraine')
+  await page.waitForSelector('[data-condition="migraine"]')
+  await page.locator('[data-condition="migraine"][data-option="First line"] [data-add-option]').click()
+  await sleep(300)
+  check((await page.inputValue('[data-row="0"][data-field="dose"]')).startsWith('2 tablets'), 'edited treatment option is used')
+}

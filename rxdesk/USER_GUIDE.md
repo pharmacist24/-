@@ -32,13 +32,19 @@
    - 👁 **معاينة الطباعة** تعرض الورقة كما ستُطبع بالضبط.
    - **PDF** يحفظ الروشتة كملف.
 
-## ٤. المرضى
+## ٤. التشخيص واقتراحات العلاج
+- اكتب التشخيص بالعربي أو الإنجليزي أو بكود ICD (مثل "لوز" أو "tonsil" أو "J03") واضغط **Enter** لإضافته. يمكنك إضافة أكثر من تشخيص.
+- تحت التشخيص تظهر **اقتراحات العلاج**: خيارات جاهزة (مثل الخط الأول، حساسية البنسلين، جرعة الأطفال). اضغط **إضافة** لوضع أدويتها في الروشتة، وتُكتب النصائح والتحاليل إذا كانت خاناتها فارغة.
+- إذا كان المريض لديه حساسية من دواء في الخيار يظهر تحذير أحمر. للأطفال تظهر خيارات الأطفال أولاً (الجرعات لكل كجم — احسبها حسب الوزن).
+- هذه اقتراحات فقط، والطبيب يراجع كل دواء وجرعة. يمكنك تعديل القائمة من **الأدوية والقوالب ← التشخيصات** (تعديل، إضافة تشخيص خاص بك، إخفاء، أو استعادة القائمة الأصلية).
+
+## ٥. المرضى
 - ابحث بالاسم (بأي ترتيب للكلمات، "احمد" تجد "أحمد") أو بجزء من رقم التليفون.
 - افتح المريض لترى بياناته وكل روشتاته السابقة:
   - 🖨 **إعادة طباعة** روشتة قديمة كما هي.
   - **تكرار كروشتة جديدة**: ينسخ الأدوية في روشتة جديدة بتاريخ اليوم.
 
-## ٥. تصميم الطباعة
+## ٦. تصميم الطباعة
 من **تصميم الطباعة** تصمم شكل الروشتة على الورق:
 - الصفحة معروضة بمقاسها الحقيقي مع مسطرة بالمليمتر.
 - **اسحب** أي عنصر لتحريكه، واسحب المربعات الصغيرة لتغيير حجمه. الأسهم تحرك 1 مم (مع Shift: 0.1 مم).
@@ -49,7 +55,7 @@
 - **ضبط الطابعة**: إذا خرجت الطباعة مُزاحة، اطبع **صفحة تجربة** وقِس الإزاحة بالمسطرة ثم اكتبها في X / Y.
 - Ctrl+Z تراجع، Ctrl+Y إعادة، Ctrl+S حفظ. يمكنك حفظ أكثر من تصميم واختيار التصميم الافتراضي، وتصدير التصميم لملف لنقله لجهاز آخر.
 
-## ٦. الإعدادات
+## ٧. الإعدادات
 - **شاشة الروشتة**: اختر شكل شاشة الروشتة الجديدة:
   - **بسيطة** (الافتراضي): اسم الدواء + سطر واحد للجرعة والتعليمات، وخانة للنصائح فقط.
   - **تفصيلية**: كل الخانات (الشكل، التركيز، عدد المرات، المدة، الطريقة، التعليمات) والتشخيص والتحاليل وموعد الإعادة واللوحة الجانبية.
@@ -64,7 +70,7 @@
 - **كلمة السر**: إضافة/تغيير/إلغاء الرقم السري. زر **قفل** في القائمة يقفل البرنامج فوراً.
   ⚠️ إذا نسيت الرقم السري لا يمكن فتحه إلا باسترجاع نسخة احتياطية قبل وضع الرقم — احتفظ به في مكان آمن.
 
-## ٧. اختصارات لوحة المفاتيح
+## ٨. اختصارات لوحة المفاتيح
 | المفتاح | الوظيفة |
 |---|---|
 | Ctrl+N أو F1 | روشتة جديدة |
@@ -73,7 +79,7 @@
 | Ctrl+F أو F2 | البحث عن مريض |
 | Enter | الحقل التالي |
 
-## ٨. أين بياناتي؟
+## ٩. أين بياناتي؟
 كل البيانات في المجلد `%APPDATA%\RxDesk` (الإعدادات ← عن البرنامج ← فتح مجلد البيانات).
 إلغاء تثبيت البرنامج **لا يحذف** البيانات، وإعادة التثبيت تعيدها كما هي.
 
@@ -116,13 +122,23 @@ RxDesk works completely offline. No data ever leaves the computer.
    - 👁 **Print preview** shows exactly what will be printed.
    - **PDF** saves it as a file.
 
-## 4. Patients
+## 4. Diagnoses and treatment suggestions
+- Type the diagnosis in English, Arabic or as an ICD code (e.g. "tonsil", "لوز", "J03") and press **Enter**. You can add
+  several diagnoses.
+- Under the diagnosis, **Treatment suggestions** show ready options (first line, penicillin allergy, child dose…).
+  Click **Add** to put their medicines into the prescription; advice and lab tests are filled if those boxes are empty.
+- A red warning appears when an option contains a drug the patient is allergic to. For children, child options come
+  first (doses are per kg — calculate them for the patient's weight).
+- These are suggestions only; the doctor reviews every drug and dose. Edit the list in **Drugs & templates →
+  Diagnoses** (edit, add your own, hide, or restore the built-in list).
+
+## 5. Patients
 - Search by name (any word order) or part of the phone number.
 - Open a patient to see their details and every previous prescription:
   - 🖨 **Reprint** an old prescription exactly as it was.
   - **Repeat as new**: copies its medicines into a new prescription dated today.
 
-## 5. Print designer
+## 6. Print designer
 In **Print designer** you decide how the prescription looks on paper:
 - The page is shown at its real size with millimetre rulers.
 - **Drag** elements to move them; drag the small squares to resize. Arrow keys move 1 mm (Shift: 0.1 mm).
@@ -137,7 +153,7 @@ In **Print designer** you decide how the prescription looks on paper:
 - Ctrl+Z undo, Ctrl+Y redo, Ctrl+S save. Keep several layouts, choose the default one, and export a layout to a file
   to move it to another PC.
 
-## 6. Settings
+## 7. Settings
 - **Prescription screen**: choose how the New prescription screen looks:
   - **Simple** (default): drug name + one "dose & instructions" line, and an advice box.
   - **Detailed**: every box (form, strength, frequency, duration, route, instructions) plus diagnosis, lab tests,
@@ -155,7 +171,7 @@ In **Print designer** you decide how the prescription looks on paper:
 - **Password**: add, change or remove the PIN. The **Lock** button in the menu locks the app at once.
   ⚠️ A forgotten PIN can only be bypassed by restoring a backup made before the PIN was set — keep it somewhere safe.
 
-## 7. Keyboard shortcuts
+## 8. Keyboard shortcuts
 | Key | Action |
 |---|---|
 | Ctrl+N or F1 | New prescription |
@@ -164,6 +180,6 @@ In **Print designer** you decide how the prescription looks on paper:
 | Ctrl+F or F2 | Find a patient |
 | Enter | Next field |
 
-## 8. Where is my data?
+## 9. Where is my data?
 Everything is in `%APPDATA%\RxDesk` (Settings → About → Open data folder).
 Uninstalling RxDesk **does not delete** your data, and reinstalling brings it back as it was.

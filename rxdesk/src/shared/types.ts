@@ -34,6 +34,8 @@ export interface RxFormSettings {
   showLabTests: boolean
   showNextVisit: boolean
   showSidePanel: boolean
+  /** Treatment suggestions under the diagnosis. */
+  showSmartPanel: boolean
 }
 
 export interface AppSettings {
@@ -150,6 +152,32 @@ export interface Favorite {
 }
 
 export type FavoriteInput = Omit<Favorite, 'id'> & { id?: number }
+
+export interface ConditionOption {
+  id?: number
+  labelEn: string
+  labelAr: string
+  forChildren: boolean
+  items: MedicineItem[]
+  advice: string
+  labs: string
+}
+
+/** A diagnosis in the condition library (built-in or added by the doctor). */
+export interface Condition {
+  id: number
+  key: string
+  specialty: 'general' | 'pediatrics' | 'dermatology' | 'internal' | 'other'
+  nameEn: string
+  nameAr: string
+  icd10: string
+  keywords: string[]
+  builtin: boolean
+  hidden: boolean
+  options: ConditionOption[]
+}
+
+export type ConditionInput = Omit<Condition, 'id' | 'key' | 'builtin' | 'hidden'> & { id?: number }
 
 export interface LayoutRecord {
   id: number

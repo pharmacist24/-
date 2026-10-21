@@ -191,6 +191,27 @@ export const handlers: Handlers = {
     }
   },
 
+  conditions: {
+    async search(q) {
+      return repo().searchConditions(q)
+    },
+    async byNames(names) {
+      return repo().conditionsByNames(Array.isArray(names) ? names.map(String) : [])
+    },
+    async list() {
+      return repo().listConditions()
+    },
+    async save(c) {
+      return repo().saveCondition(c)
+    },
+    async delete(id) {
+      repo().deleteCondition(id)
+    },
+    async resetBuiltins() {
+      repo().resetBuiltinConditions()
+    }
+  },
+
   favorites: {
     async list() {
       return repo().listFavorites()

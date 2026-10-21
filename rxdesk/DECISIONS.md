@@ -104,3 +104,16 @@ Choices made where the brief was open, picking the simplest option for a non-tec
 - Templates and previous prescriptions stay one click away (header "Templates" button, "Previous" next to the
   patient), and dose phrases are suggestions in the dose box.
 - Table layouts drop columns that are empty for every medicine, so simple prescriptions don't print empty columns.
+
+## Diagnoses and treatment suggestions
+- A built-in starter library of ~80 common conditions (general practice, pediatrics, dermatology, internal medicine)
+  with ICD-10 codes, Arabic/English names, search words and 1–3 first-line treatment options each
+  (`src/shared/medical/conditions.ts`). It is copied into the database by migration v2, so the doctor can edit it,
+  add their own, hide built-ins or restore them; it never changes a prescription without a click.
+- Content is standard first-line outpatient regimens with generic names. Pediatric options give doses per kg as
+  text — the app does not calculate doses. A disclaimer is shown in the panel.
+- Several diagnoses are stored in the existing `diagnosis` text column joined with " + " (no schema change; old
+  prescriptions load and print unchanged). Enter adds the best suggestion; free text is still allowed.
+- Safety helpers: allergy conflicts per option (same matcher as the medicine rows, including drug classes); for
+  children (<12 y by birth date) child options/diagnoses are listed first and adult options are marked "adult dose".
+- Older installs: the diagnosis box and the suggestions panel are switched on once when upgrading.

@@ -2,14 +2,15 @@ import type { AppSettings, ClinicProfile, MedicineItem, RxFormSettings, RxMedFie
 
 export const ALL_RX_MED_FIELDS: RxMedField[] = ['form', 'strength', 'frequency', 'duration', 'route', 'instructions']
 
-/** Simple screen: drug name + one dose line, advice box only. */
+/** Simple screen: drug name + one dose line, diagnosis with treatment suggestions, advice box. */
 export const SIMPLE_RX_FORM: RxFormSettings = {
   medFields: [],
-  showDiagnosis: false,
+  showDiagnosis: true,
   showNotes: true,
   showLabTests: false,
   showNextVisit: false,
-  showSidePanel: false
+  showSidePanel: false,
+  showSmartPanel: true
 }
 
 /** Detailed screen: every field and section. */
@@ -19,7 +20,8 @@ export const DETAILED_RX_FORM: RxFormSettings = {
   showNotes: true,
   showLabTests: true,
   showNextVisit: true,
-  showSidePanel: true
+  showSidePanel: true,
+  showSmartPanel: true
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {

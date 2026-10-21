@@ -1,6 +1,8 @@
 import type Database from 'better-sqlite3'
 import type {
   AppSettings,
+  Condition,
+  ConditionInput,
   ClinicProfile,
   DosePhrase,
   Drug,
@@ -22,6 +24,7 @@ import type { Layout } from '@shared/layout/types'
 import { ALL_RX_MED_FIELDS, DEFAULT_SETTINGS, EMPTY_PROFILE } from '@shared/defaults'
 import { digitsOnly, formatAge, normalizeForSearch, todayIso } from '@shared/text'
 import { normalizeLayout } from '@shared/layout/defaults'
+import { conditionSearchText, seedBuiltinConditions } from './migrations'
 
 type Row = Record<string, any>
 
@@ -88,7 +91,17 @@ function cleanRxForm(f: AppSettings['rxForm']): AppSettings['rxForm'] {
     showNotes: !!f.showNotes,
     showLabTests: !!f.showLabTests,
     showNextVisit: !!f.showNextVisit,
-    showSidePanel: !!f.showSidePanel
+    showSidePanel: !!f.showSidePanel,
+    showSmartPanel: !!f.showSmartPanel
+  }
+}
+
+function safeJsonArray(v: string): any[] {
+  try {
+    const x = JSON.parse(v || '[]')
+    return Array.isArray(x) ? x : []
+  } catch {
+    return []
   }
 }
 
@@ -120,6 +133,10 @@ export class Repo {
 
   getSettings(): AppSettings {
     const s = this.getKey<Partial<AppSettings>>('app', {})
+    // Settings saved before treatment suggestions existed: turn on the diagnosis box and the panel once.
+    if (s.rxForm && (s.rxForm as Partial<AppSettings['rxForm']>).showSmartPanel === undefined) {
+      s.rxForm = { ...s.rxForm, showDiagnosis: true, showSmartPanel: true }
+    }
     return {
       ...DEFAULT_SETTINGS,
       ...s,
@@ -606,6 +623,118 @@ export class Repo {
         this.setDefaultLayout(first.id)
       }
     })()
+  }
+
+  // ---------------------------------------------------------------- condition library
+  private conditionsFrom(rows: Row[]): Condition[] {
+    if (!rows.length) return []
+    const ids = rows.map((r) => r.id)
+    const opts = this.db
+      .prepare(`SELECT * FROM condition_options WHERE condition_id IN (${ids.map(() => '?').join(',')}) ORDER BY position, id`)
+      .all(...ids) as Row[]
+    return rows.map((r) => ({
+      id: r.id,
+      key: r.key,
+      specialty: r.specialty,
+      nameEn: r.name_en,
+      nameAr: r.name_ar,
+      icd10: r.icd10,
+      keywords: safeJsonArray(r.keywords),
+      builtin: !!r.is_builtin,
+      hidden: !!r.hidden,
+      options: opts
+        .filter((o) => o.condition_id === r.id)
+        .map((o) => ({
+          id: o.id,
+          labelEn: o.label_en,
+          labelAr: o.label_ar,
+          forChildren: !!o.for_children,
+          items: safeJsonArray(o.items).map(cleanItem),
+          advice: o.advice,
+          labs: o.labs
+        }))
+    }))
+  }
+
+  /** Visible conditions matching the query (names AR/EN, ICD-10 code, keywords). */
+  searchConditions(query: string, limit = 12): Condition[] {
+    const q = normalizeForSearch(query ?? '')
+    if (!q) return []
+    const words = q.split(' ').filter(Boolean)
+    const rows = this.db
+      .prepare(
+        `SELECT *, CASE WHEN lower(name_en) LIKE ? ESCAPE '\\' OR name_ar LIKE ? ESCAPE '\\' OR lower(icd10) LIKE ? ESCAPE '\\' THEN 0 ELSE 1 END AS rank
+         FROM conditions WHERE hidden = 0 AND ${words.map(() => "search_text LIKE ? ESCAPE '\\'").join(' AND ')}
+         ORDER BY rank, name_en LIMIT ?`
+      )
+      .all(`${likeEscape(q)}%`, `${likeEscape(query.trim())}%`, `${likeEscape(q)}%`, ...words.map((w) => `%${likeEscape(w)}%`), limit) as Row[]
+    return this.conditionsFrom(rows)
+  }
+
+  /** Conditions whose English or Arabic name exactly matches one of the given diagnosis texts. */
+  conditionsByNames(names: string[]): Condition[] {
+    const wanted = names.map((n) => normalizeForSearch(n)).filter(Boolean)
+    if (!wanted.length) return []
+    const rows = (this.db.prepare('SELECT * FROM conditions WHERE hidden = 0').all() as Row[]).filter(
+      (r) => wanted.includes(normalizeForSearch(r.name_en)) || wanted.includes(normalizeForSearch(r.name_ar))
+    )
+    const found = this.conditionsFrom(rows)
+    // Keep the order of the diagnoses as typed.
+    return wanted
+      .map((w) => found.find((c) => normalizeForSearch(c.nameEn) === w || normalizeForSearch(c.nameAr) === w))
+      .filter((c, i, a): c is Condition => !!c && a.indexOf(c) === i)
+  }
+
+  listConditions(includeHidden = true): Condition[] {
+    return this.conditionsFrom(
+      this.db.prepare(`SELECT * FROM conditions ${includeHidden ? '' : 'WHERE hidden = 0'} ORDER BY specialty, name_en COLLATE NOCASE`).all() as Row[]
+    )
+  }
+
+  saveCondition(c: ConditionInput): Condition {
+    const nameEn = (c.nameEn ?? '').trim()
+    const nameAr = (c.nameAr ?? '').trim()
+    if (!nameEn && !nameAr) throw new AppError('VALIDATION', 'Diagnosis name is required')
+    const keywords = (c.keywords ?? []).map((k) => String(k).trim()).filter(Boolean)
+    const specialty = ['general', 'pediatrics', 'dermatology', 'internal'].includes(c.specialty) ? c.specialty : 'other'
+    const search = conditionSearchText({ nameEn, nameAr, icd10: c.icd10 ?? '', keywords })
+    const id = this.db.transaction(() => {
+      let id = c.id
+      if (id) {
+        this.db
+          .prepare('UPDATE conditions SET specialty=?, name_en=?, name_ar=?, icd10=?, keywords=?, search_text=? WHERE id=?')
+          .run(specialty, nameEn, nameAr, (c.icd10 ?? '').trim(), JSON.stringify(keywords), search, id)
+        this.db.prepare('DELETE FROM condition_options WHERE condition_id = ?').run(id)
+      } else {
+        id = Number(
+          this.db
+            .prepare('INSERT INTO conditions(key, specialty, name_en, name_ar, icd10, keywords, search_text, is_builtin) VALUES(?, ?, ?, ?, ?, ?, ?, 0)')
+            .run('user_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), specialty, nameEn, nameAr, (c.icd10 ?? '').trim(), JSON.stringify(keywords), search).lastInsertRowid
+        )
+      }
+      const ins = this.db.prepare(
+        'INSERT INTO condition_options(condition_id, position, label_en, label_ar, for_children, items, advice, labs) VALUES(?, ?, ?, ?, ?, ?, ?, ?)'
+      )
+      ;(c.options ?? []).forEach((o, i) => {
+        const items = (o.items ?? []).map(cleanItem).filter((x) => x.drugName)
+        ins.run(id, i, (o.labelEn ?? '').trim(), (o.labelAr ?? '').trim(), o.forChildren ? 1 : 0, JSON.stringify(items), (o.advice ?? '').trim(), (o.labs ?? '').trim())
+      })
+      return id
+    })()
+    return this.conditionsFrom([this.db.prepare('SELECT * FROM conditions WHERE id = ?').get(id) as Row])[0]
+  }
+
+  /** Doctor-added diagnoses are deleted; built-in ones are only hidden (can be restored). */
+  deleteCondition(id: number): void {
+    const r = this.db.prepare('SELECT is_builtin FROM conditions WHERE id = ?').get(id) as Row | undefined
+    if (!r) return
+    if (r.is_builtin) this.db.prepare('UPDATE conditions SET hidden = 1 WHERE id = ?').run(id)
+    else this.db.prepare('DELETE FROM conditions WHERE id = ?').run(id)
+  }
+
+  /** Puts every built-in diagnosis back as shipped (doctor-added ones are kept). */
+  resetBuiltinConditions(): void {
+    this.db.transaction(() => seedBuiltinConditions(this.db))()
   }
 
   // ---------------------------------------------------------------- reports

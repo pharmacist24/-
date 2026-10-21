@@ -19,7 +19,7 @@ import {
   Tooltip,
   UnstyledButton
 } from '@mantine/core'
-import { useDebouncedValue, useHotkeys } from '@mantine/hooks'
+import { useHotkeys } from '@mantine/hooks'
 import { modals } from '@mantine/modals'
 import {
   IconAlertTriangle,
@@ -35,14 +35,16 @@ import {
   IconTrash,
   IconX
 } from '@tabler/icons-react'
-import type { DosePhrase, Favorite, LayoutRecord, MedicineItem, Patient, PrescriptionListItem } from '@shared/types'
-import { formatAge, formatDate, genderText, todayIso } from '@shared/text'
+import type { ConditionOption, DosePhrase, Favorite, LayoutRecord, MedicineItem, Patient, PrescriptionListItem } from '@shared/types'
+import { ageFromBirthDate, formatAge, formatDate, genderText, todayIso } from '@shared/text'
 import { api } from '../lib/api'
 import { useApp } from '../lib/app-context'
 import { notifyError, notifyOk } from '../lib/notify'
 import { enterAsTab } from '../lib/keyboard'
 import MedicinesEditor, { emptyItem } from '../components/MedicinesEditor'
 import PatientPicker from '../components/PatientPicker'
+import DiagnosisInput, { splitDiagnoses } from '../components/DiagnosisInput'
+import TreatmentPanel from '../components/TreatmentPanel'
 import PatientFormModal from '../components/PatientFormModal'
 import { usePrinting } from '../print/usePrinting'
 import classes from './PrescriptionScreen.module.css'
@@ -81,8 +83,6 @@ export default function PrescriptionScreen({ rxId: initialRxId, patientId, repea
   const [layouts, setLayouts] = useState<LayoutRecord[]>([])
   const [layoutId, setLayoutId] = useState<string | null>(null)
   const [history, setHistory] = useState<PrescriptionListItem[]>([])
-  const [dxOptions, setDxOptions] = useState<string[]>([])
-  const [dDx] = useDebouncedValue(form.diagnosis, 150)
   const [busy, setBusy] = useState('')
   const [tplOpen, setTplOpen] = useState(false)
   const [tplName, setTplName] = useState('')
@@ -156,9 +156,9 @@ export default function PrescriptionScreen({ rxId: initialRxId, patientId, repea
     api.rx.list({ patientId: patient.id, limit: 8 }).then((h) => setHistory(h.filter((x) => x.id !== rxId)))
   }, [patient, rxId])
 
-  useEffect(() => {
-    api.rx.diagnoses(dDx).then(setDxOptions).catch(() => setDxOptions([]))
-  }, [dDx])
+
+  const patientAge = patient ? ageFromBirthDate(patient.birthDate) : null
+  const patientIsChild = patientAge ? patientAge.years < 12 : null
 
   // A hidden section still shows when this prescription already has a value in it, so nothing is lost.
   const showDx = rf.showDiagnosis || !!form.diagnosis
@@ -228,6 +228,11 @@ export default function PrescriptionScreen({ rxId: initialRxId, patientId, repea
   const insertPhrase = (text: string) => {
     const idx = Math.min(activeRow, items.length - 1)
     setItems(items.map((it, i) => (i === idx ? { ...it, dose: text } : it)))
+  }
+
+  const addOption = (o: ConditionOption) => {
+    setItems([...filled(items), ...o.items.map((i) => ({ ...emptyItem(), ...i })), emptyItem()])
+    setForm((cur) => ({ ...cur, notes: cur.notes || o.advice, labTests: cur.labTests || o.labs }))
   }
 
   const insertTemplate = (f: Favorite) => {
@@ -434,22 +439,12 @@ export default function PrescriptionScreen({ rxId: initialRxId, patientId, repea
               )}
             </div>
 
-            {/* Diagnosis (shown if enabled, or if this prescription already has one) */}
+            {/* Diagnoses (shown if enabled, or if this prescription already has one) + treatment suggestions */}
             {showDx && (
-            <div className="rx-card">
-              <Group align="flex-end" wrap="nowrap">
-                <Autocomplete
-                  style={{ flex: 1 }}
-                  label={t('rx.diagnosis')}
-                  value={form.diagnosis}
-                  onChange={(v) => setF('diagnosis', v)}
-                  data={dxOptions.filter((d) => d !== form.diagnosis)}
-                  filter={({ options }) => options}
-                  dir="auto"
-                  id="rx-diagnosis"
-                />
-              </Group>
-            </div>
+              <div className="rx-card">
+                <DiagnosisInput value={form.diagnosis} onChange={(v) => setF('diagnosis', v)} child={patientIsChild} />
+                {rf.showSmartPanel && <TreatmentPanel diagnoses={splitDiagnoses(form.diagnosis)} patient={patient} onAdd={addOption} />}
+              </div>
             )}
 
             {/* Medicines */}

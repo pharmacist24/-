@@ -9,7 +9,7 @@ export default async function ({ page, shot, check, sleep }) {
 
   const fieldsInRow0 = await page.locator('[data-row="0"]').evaluateAll((els) => els.map((e) => e.getAttribute('data-field')))
   check(JSON.stringify(fieldsInRow0) === JSON.stringify(['drugName', 'dose']), 'simple mode: each medicine has only drug + dose boxes (' + fieldsInRow0.join(',') + ')')
-  check((await page.locator('#rx-diagnosis').count()) === 0, 'diagnosis hidden by default')
+  check((await page.locator('#rx-diagnosis').count()) === 1, 'diagnosis shown by default (with treatment suggestions)')
   check((await page.locator('#rx-labs').count()) === 0 && (await page.locator('#rx-next').count()) === 0, 'lab tests and next visit hidden by default')
   check((await page.locator('#rx-notes').count()) === 1, 'advice box shown')
   check((await page.locator('[data-phrase]').count()) === 0, 'side panel hidden by default')
@@ -62,7 +62,7 @@ export default async function ({ page, shot, check, sleep }) {
   await sleep(400)
   await page.keyboard.press('Enter')
   await page.waitForSelector('#rx-patient-name')
-  check((await page.locator('#rx-diagnosis').count()) === 1, 'diagnosis appears after enabling it in Settings')
+  check((await page.locator('#rx-diagnosis').count()) === 0, 'diagnosis disappears after switching it off in Settings')
   await page.click('[data-row="0"][data-field="drugName"]')
   await page.keyboard.type('Omep', { delay: 40 })
   await sleep(500)

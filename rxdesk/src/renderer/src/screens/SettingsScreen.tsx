@@ -143,6 +143,7 @@ function RxFormTab() {
   const sections: [keyof RxFormSettings, StringKey][] = [
     ['showNotes', 'st.rxShowNotes'],
     ['showDiagnosis', 'st.rxShowDiagnosis'],
+    ['showSmartPanel', 'st.rxShowSmartPanel'],
     ['showLabTests', 'st.rxShowLabTests'],
     ['showNextVisit', 'st.rxShowNextVisit'],
     ['showSidePanel', 'st.rxShowSidePanel']

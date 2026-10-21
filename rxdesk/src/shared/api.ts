@@ -1,5 +1,7 @@
 import type {
   AppInfo,
+  Condition,
+  ConditionInput,
   AppSettings,
   BackupInfo,
   ClinicProfile,
@@ -81,6 +83,14 @@ export interface Api {
     save(p: { id?: number; text: string }): Promise<DosePhrase>
     delete(id: number): Promise<void>
     reorder(ids: number[]): Promise<void>
+  }
+  conditions: {
+    search(query: string): Promise<Condition[]>
+    byNames(names: string[]): Promise<Condition[]>
+    list(): Promise<Condition[]>
+    save(c: ConditionInput): Promise<Condition>
+    delete(id: number): Promise<void>
+    resetBuiltins(): Promise<void>
   }
   favorites: {
     list(): Promise<Favorite[]>

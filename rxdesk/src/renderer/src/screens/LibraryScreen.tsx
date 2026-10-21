@@ -16,7 +16,7 @@ import {
   Title
 } from '@mantine/core'
 import { modals } from '@mantine/modals'
-import { IconArrowDown, IconArrowUp, IconEdit, IconPill, IconPlus, IconSearch, IconTemplate, IconTextCaption, IconTrash } from '@tabler/icons-react'
+import { IconStethoscope, IconArrowDown, IconArrowUp, IconEdit, IconPill, IconPlus, IconSearch, IconTemplate, IconTextCaption, IconTrash } from '@tabler/icons-react'
 import type { DosePhrase, Drug, DrugInput, Favorite, FavoriteInput, MedicineItem } from '@shared/types'
 import { DRUG_FORMS, DURATION_SUGGESTIONS, FREQUENCY_SUGGESTIONS, INSTRUCTION_SUGGESTIONS, ROUTES } from '@shared/defaults'
 import { normalizeForSearch } from '@shared/text'
@@ -24,6 +24,7 @@ import { api } from '../lib/api'
 import { useApp } from '../lib/app-context'
 import { notifyError, notifyOk } from '../lib/notify'
 import MedicinesEditor, { emptyItem } from '../components/MedicinesEditor'
+import ConditionsTab from '../components/ConditionsTab'
 
 export default function LibraryScreen() {
   const { t } = useApp()
@@ -43,6 +44,9 @@ export default function LibraryScreen() {
           <Tabs.Tab value="favorites" leftSection={<IconTemplate size={18} />} data-tab="favorites">
             {t('lib.favorites')}
           </Tabs.Tab>
+          <Tabs.Tab value="conditions" leftSection={<IconStethoscope size={18} />} data-tab="conditions">
+            {t('lib.conditions')}
+          </Tabs.Tab>
         </Tabs.List>
         <Tabs.Panel value="drugs">
           <DrugsTab />
@@ -52,6 +56,9 @@ export default function LibraryScreen() {
         </Tabs.Panel>
         <Tabs.Panel value="favorites">
           <FavoritesTab />
+        </Tabs.Panel>
+        <Tabs.Panel value="conditions">
+          <ConditionsTab />
         </Tabs.Panel>
       </Tabs>
     </div>

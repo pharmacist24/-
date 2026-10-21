@@ -1,4 +1,6 @@
 import type Database from 'better-sqlite3'
+import { BUILTIN_CONDITIONS } from '@shared/medical/conditions'
+import { normalizeForSearch } from '@shared/text'
 
 // Versioned schema migrations. NEVER edit a migration that has shipped:
 // add a new entry with the next version number instead.
@@ -111,8 +113,63 @@ export const migrations: Migration[] = [
         );
       `)
     }
+  },
+  {
+    version: 2,
+    name: 'condition library (diagnoses + treatment options)',
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE conditions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          key TEXT NOT NULL UNIQUE,
+          specialty TEXT NOT NULL DEFAULT 'other',
+          name_en TEXT NOT NULL DEFAULT '',
+          name_ar TEXT NOT NULL DEFAULT '',
+          icd10 TEXT NOT NULL DEFAULT '',
+          keywords TEXT NOT NULL DEFAULT '[]',
+          search_text TEXT NOT NULL DEFAULT '',
+          is_builtin INTEGER NOT NULL DEFAULT 0,
+          hidden INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE TABLE condition_options (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          condition_id INTEGER NOT NULL REFERENCES conditions(id) ON DELETE CASCADE,
+          position INTEGER NOT NULL DEFAULT 0,
+          label_en TEXT NOT NULL DEFAULT '',
+          label_ar TEXT NOT NULL DEFAULT '',
+          for_children INTEGER NOT NULL DEFAULT 0,
+          items TEXT NOT NULL DEFAULT '[]',
+          advice TEXT NOT NULL DEFAULT '',
+          labs TEXT NOT NULL DEFAULT ''
+        );
+        CREATE INDEX idx_condition_options ON condition_options(condition_id, position);
+      `)
+      seedBuiltinConditions(db)
+    }
   }
 ]
+
+export function conditionSearchText(c: { nameEn: string; nameAr: string; icd10: string; keywords: string[] }): string {
+  return normalizeForSearch([c.nameEn, c.nameAr, c.icd10, ...c.keywords].join(' | '))
+}
+
+/** Inserts (or re-inserts) the built-in condition library. Existing built-in rows with the same key are replaced. */
+export function seedBuiltinConditions(db: Database.Database): void {
+  const del = db.prepare('DELETE FROM conditions WHERE key = ?')
+  const ins = db.prepare(
+    `INSERT INTO conditions(key, specialty, name_en, name_ar, icd10, keywords, search_text, is_builtin, hidden)
+     VALUES(?, ?, ?, ?, ?, ?, ?, 1, 0)`
+  )
+  const opt = db.prepare(
+    `INSERT INTO condition_options(condition_id, position, label_en, label_ar, for_children, items, advice, labs)
+     VALUES(?, ?, ?, ?, ?, ?, ?, ?)`
+  )
+  for (const c of BUILTIN_CONDITIONS) {
+    del.run(c.key)
+    const id = Number(ins.run(c.key, c.specialty, c.nameEn, c.nameAr, c.icd10, JSON.stringify(c.keywords), conditionSearchText(c)).lastInsertRowid)
+    c.options.forEach((o, i) => opt.run(id, i, o.labelEn, o.labelAr, o.forChildren ? 1 : 0, JSON.stringify(o.items), o.advice ?? '', o.labs ?? ''))
+  }
+}
 
 export const LATEST_VERSION = migrations[migrations.length - 1].version
 
