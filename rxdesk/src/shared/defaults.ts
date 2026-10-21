@@ -1,4 +1,26 @@
-import type { AppSettings, ClinicProfile, MedicineItem } from './types'
+import type { AppSettings, ClinicProfile, MedicineItem, RxFormSettings, RxMedField } from './types'
+
+export const ALL_RX_MED_FIELDS: RxMedField[] = ['form', 'strength', 'frequency', 'duration', 'route', 'instructions']
+
+/** Simple screen: drug name + one dose line, advice box only. */
+export const SIMPLE_RX_FORM: RxFormSettings = {
+  medFields: [],
+  showDiagnosis: false,
+  showNotes: true,
+  showLabTests: false,
+  showNextVisit: false,
+  showSidePanel: false
+}
+
+/** Detailed screen: every field and section. */
+export const DETAILED_RX_FORM: RxFormSettings = {
+  medFields: [...ALL_RX_MED_FIELDS],
+  showDiagnosis: true,
+  showNotes: true,
+  showLabTests: true,
+  showNextVisit: true,
+  showSidePanel: true
+}
 
 export const DEFAULT_SETTINGS: AppSettings = {
   setupCompleted: false,
@@ -8,7 +30,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   silentPrint: false,
   copies: 1,
   autoBackup: { enabled: true, folder: '', keep: 14, lastRunAt: '' },
-  pinEnabled: false
+  pinEnabled: false,
+  rxForm: SIMPLE_RX_FORM
 }
 
 export const EMPTY_PROFILE: ClinicProfile = {

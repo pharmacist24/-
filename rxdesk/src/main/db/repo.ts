@@ -19,7 +19,7 @@ import type {
   ReportSummary
 } from '@shared/types'
 import type { Layout } from '@shared/layout/types'
-import { DEFAULT_SETTINGS, EMPTY_PROFILE } from '@shared/defaults'
+import { ALL_RX_MED_FIELDS, DEFAULT_SETTINGS, EMPTY_PROFILE } from '@shared/defaults'
 import { digitsOnly, formatAge, normalizeForSearch, todayIso } from '@shared/text'
 import { normalizeLayout } from '@shared/layout/defaults'
 
@@ -80,6 +80,18 @@ function cleanItem(i: Partial<MedicineItem>): MedicineItem {
   }
 }
 
+function cleanRxForm(f: AppSettings['rxForm']): AppSettings['rxForm'] {
+  const fields = Array.isArray(f.medFields) ? f.medFields : []
+  return {
+    medFields: ALL_RX_MED_FIELDS.filter((x) => fields.includes(x)),
+    showDiagnosis: !!f.showDiagnosis,
+    showNotes: !!f.showNotes,
+    showLabTests: !!f.showLabTests,
+    showNextVisit: !!f.showNextVisit,
+    showSidePanel: !!f.showSidePanel
+  }
+}
+
 /** Escape LIKE wildcards. */
 function likeEscape(s: string): string {
   return s.replace(/[\\%_]/g, (c) => '\\' + c)
@@ -111,7 +123,8 @@ export class Repo {
     return {
       ...DEFAULT_SETTINGS,
       ...s,
-      autoBackup: { ...DEFAULT_SETTINGS.autoBackup, ...(s.autoBackup ?? {}) }
+      autoBackup: { ...DEFAULT_SETTINGS.autoBackup, ...(s.autoBackup ?? {}) },
+      rxForm: cleanRxForm({ ...DEFAULT_SETTINGS.rxForm, ...(s.rxForm ?? {}) })
     }
   }
 
@@ -120,7 +133,8 @@ export class Repo {
     const next: AppSettings = {
       ...current,
       ...patch,
-      autoBackup: { ...current.autoBackup, ...(patch.autoBackup ?? {}) }
+      autoBackup: { ...current.autoBackup, ...(patch.autoBackup ?? {}) },
+      rxForm: cleanRxForm({ ...current.rxForm, ...(patch.rxForm ?? {}) })
     }
     next.copies = Math.min(20, Math.max(1, Math.round(Number(next.copies) || 1)))
     next.autoBackup.keep = Math.min(365, Math.max(1, Math.round(Number(next.autoBackup.keep) || 14)))

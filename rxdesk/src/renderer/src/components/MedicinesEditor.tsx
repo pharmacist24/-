@@ -1,8 +1,8 @@
 import { memo, useEffect, useRef, useState } from 'react'
 import { ActionIcon, Alert, Autocomplete, Badge, Group, Text, TextInput, Tooltip } from '@mantine/core'
 import { IconAlertTriangle, IconArrowDown, IconArrowUp, IconTrash } from '@tabler/icons-react'
-import type { Drug, MedicineItem } from '@shared/types'
-import { DRUG_FORMS, DURATION_SUGGESTIONS, EMPTY_ITEM, FREQUENCY_SUGGESTIONS, INSTRUCTION_SUGGESTIONS, ROUTES } from '@shared/defaults'
+import type { Drug, MedicineItem, RxMedField } from '@shared/types'
+import { ALL_RX_MED_FIELDS, DRUG_FORMS, DURATION_SUGGESTIONS, EMPTY_ITEM, FREQUENCY_SUGGESTIONS, INSTRUCTION_SUGGESTIONS, ROUTES } from '@shared/defaults'
 import { findAllergyMatches } from '@shared/text'
 import { api } from '../lib/api'
 import { useT } from '../lib/app-context'
@@ -22,10 +22,25 @@ interface Props {
   /** Index of the row that dose phrases are inserted into. */
   onActiveRow?: (index: number) => void
   activeRow?: number
+  /** Optional fields to show (Settings → Prescription screen). Drug name and dose are always shown. */
+  fields?: RxMedField[]
+  /** Saved dose phrases, offered as suggestions in the dose box. */
+  phrases?: string[]
+}
+
+const SIG_FIELDS: RxMedField[] = ['frequency', 'duration', 'route', 'instructions']
+
+/**
+ * Text for the dose box when a drug is picked: the library dose plus every library value
+ * whose field is hidden, so the printout shows exactly what the doctor sees.
+ */
+export function doseLine(d: Pick<Drug, 'dose' | 'frequency' | 'duration' | 'instructions'>, visible: RxMedField[]): string {
+  const hidden = (['frequency', 'duration', 'instructions'] as const).filter((f) => !visible.includes(f))
+  return [d.dose, ...hidden.map((f) => d[f])].map((x) => (x ?? '').trim()).filter(Boolean).join(' · ')
 }
 
 /** Editable list of medicines. Always keeps one empty row at the end for fast typing. */
-export default function MedicinesEditor({ items, onChange, allergies = '', onActiveRow, activeRow }: Props) {
+export default function MedicinesEditor({ items, onChange, allergies = '', onActiveRow, activeRow, fields = ALL_RX_MED_FIELDS, phrases = [] }: Props) {
   const t = useT()
   const wrapRef = useRef<HTMLDivElement>(null)
   const pendingFocus = useRef<{ row: number; field: Field } | null>(null)
@@ -61,15 +76,17 @@ export default function MedicinesEditor({ items, onChange, allergies = '', onAct
   const pickDrug = (index: number, d: Drug) => {
     const it = latest.current[index]
     const fill = (k: Field, v: string) => (it[k] && k !== 'drugName' ? it[k] : v)
+    // Hidden sig fields go into the dose line; hidden form/strength are still kept (shown under the name).
+    const sig = (k: 'frequency' | 'duration' | 'route' | 'instructions') => (fields.includes(k) ? fill(k, d[k]) : it[k])
     update(index, {
       drugName: d.name,
       form: fill('form', d.form),
       strength: fill('strength', d.strength),
-      dose: fill('dose', d.dose),
-      frequency: fill('frequency', d.frequency),
-      duration: fill('duration', d.duration),
-      route: fill('route', d.route),
-      instructions: fill('instructions', d.instructions)
+      dose: fill('dose', doseLine(d, fields)),
+      frequency: sig('frequency'),
+      duration: sig('duration'),
+      route: sig('route'),
+      instructions: sig('instructions')
     })
     pendingFocus.current = { row: index, field: 'dose' }
   }
@@ -124,6 +141,8 @@ export default function MedicinesEditor({ items, onChange, allergies = '', onAct
           onMove={move}
           onRemove={remove}
           onFocusRow={(idx) => onActiveRow?.(idx)}
+          fields={fields}
+          phrases={phrases}
         />
       ))}
     </div>
@@ -143,9 +162,11 @@ interface RowProps {
   onMove: (i: number, d: -1 | 1) => void
   onRemove: (i: number) => void
   onFocusRow: (i: number) => void
+  fields: RxMedField[]
+  phrases: string[]
 }
 
-const Row = memo(function Row({ index, item, isLast, canMoveDown, active, allergies, t, onUpdate, onPick, onMove, onRemove, onFocusRow }: RowProps) {
+const Row = memo(function Row({ index, item, isLast, canMoveDown, active, allergies, t, onUpdate, onPick, onMove, onRemove, onFocusRow, fields, phrases }: RowProps) {
   const [drugs, setDrugs] = useState<Drug[]>([])
   const query = useRef('')
 
@@ -164,6 +185,12 @@ const Row = memo(function Row({ index, item, isLast, canMoveDown, active, allerg
   }
 
   const matches = item.drugName ? findAllergyMatches(item.drugName, allergies) : []
+  const show = (f: RxMedField) => fields.includes(f)
+  const line2Fields = SIG_FIELDS.filter(show)
+  const sigVisible = line2Fields.length > 0
+  const line1Cols = ['2.4fr', show('form') && '1fr', show('strength') && '1fr', sigVisible ? '2fr' : '3.2fr'].filter(Boolean).join(' ')
+  // Values that will print but whose box is hidden (e.g. "1 g · Tab").
+  const hiddenExtra = [!show('strength') && item.strength, !show('form') && item.form].filter(Boolean).join(' · ')
   const prefixMatch = !!drugs[0] && drugs[0].name.toLowerCase().startsWith(item.drugName.trim().toLowerCase()) && item.drugName.trim().length > 0
   const common = (field: Field) => ({
     'data-row': index,
@@ -196,7 +223,7 @@ const Row = memo(function Row({ index, item, isLast, canMoveDown, active, allerg
         </Badge>
       </div>
       <div className={classes.fields}>
-        <div className={classes.line1}>
+        <div className={classes.line1} style={{ gridTemplateColumns: line1Cols }}>
           <Autocomplete
             {...common('drugName')}
             label={t('rx.drug')}
@@ -227,18 +254,20 @@ const Row = memo(function Row({ index, item, isLast, canMoveDown, active, allerg
               if (d) onPick(index, d)
             }}
             comboboxProps={{ withinPortal: true }}
-            classNames={{ label: classes.label, input: classes.drugInput }}
+            classNames={{ label: classes.label, input: classes.drugInput, description: classes.drugExtra }}
+            inputWrapperOrder={['label', 'input', 'description']}
+            description={hiddenExtra || undefined}
           />
-          {suggest('form', t('rx.form'), DRUG_FORMS, 'ltr')}
-          {text('strength', t('rx.strength'), 'ltr')}
-          {text('dose', t('rx.dose'))}
+          {show('form') && suggest('form', t('rx.form'), DRUG_FORMS, 'ltr')}
+          {show('strength') && text('strength', t('rx.strength'), 'ltr')}
+          {suggest('dose', sigVisible ? t('rx.dose') : t('rx.doseLine'), phrases)}
         </div>
-        {!isLast || item.drugName ? (
-          <div className={classes.line2}>
-            {suggest('frequency', t('rx.frequency'), FREQUENCY_SUGGESTIONS)}
-            {suggest('duration', t('rx.duration'), DURATION_SUGGESTIONS)}
-            {suggest('route', t('rx.route'), ROUTES, 'ltr')}
-            {suggest('instructions', t('rx.instructions'), INSTRUCTION_SUGGESTIONS)}
+        {sigVisible && (!isLast || item.drugName) ? (
+          <div className={classes.line2} style={{ gridTemplateColumns: line2Fields.map((f) => (f === 'instructions' ? '2fr' : f === 'frequency' ? '1.6fr' : '1fr')).join(' ') }}>
+            {show('frequency') && suggest('frequency', t('rx.frequency'), FREQUENCY_SUGGESTIONS)}
+            {show('duration') && suggest('duration', t('rx.duration'), DURATION_SUGGESTIONS)}
+            {show('route') && suggest('route', t('rx.route'), ROUTES, 'ltr')}
+            {show('instructions') && suggest('instructions', t('rx.instructions'), INSTRUCTION_SUGGESTIONS)}
           </div>
         ) : null}
         {matches.length > 0 && (

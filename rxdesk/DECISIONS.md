@@ -90,3 +90,17 @@ Choices made where the brief was open, picking the simplest option for a non-tec
   (same code) through the Playwright e2e suite. Wine's `tasklist` makes the installer's "RxDesk is running" check
   misfire, so the Wine test used a build with that check disabled (`scripts/wine-test/skip-running-check.nsh`); the
   real installer keeps the check. Under Wine the uninstaller left an empty program folder.
+
+## Simple prescription screen (v1.0 follow-up)
+- The New prescription screen is **simple by default**: each medicine is drug name + one "dose & instructions" line;
+  only the advice box is shown. Diagnosis, lab tests, next visit and the side panel are off. Settings →
+  Prescription screen has "Simple" / "Detailed" presets and a checkbox/switch for every box and section.
+- When a medicine box is hidden, picking a drug writes the library's frequency, duration and instructions into the
+  dose line ("1 tablet · every 12 hours · 7 days · بعد الأكل") and leaves the hidden boxes empty, so the printout
+  shows exactly what is on screen. Hidden strength/form are still filled (they print after the drug name) and are
+  shown in small grey text under the name.
+- A hidden section still appears when the prescription already has a value in it (an old prescription, a template
+  with a diagnosis), so nothing is ever hidden silently.
+- Templates and previous prescriptions stay one click away (header "Templates" button, "Previous" next to the
+  patient), and dose phrases are suggestions in the dose box.
+- Table layouts drop columns that are empty for every medicine, so simple prescriptions don't print empty columns.

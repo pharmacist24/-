@@ -6,6 +6,7 @@ import {
   Button,
   Group,
   Kbd,
+  Menu,
   Modal,
   ScrollArea,
   Select,
@@ -27,6 +28,7 @@ import {
   IconEye,
   IconFilePlus,
   IconFileTypePdf,
+  IconHistory,
   IconPrinter,
   IconStar,
   IconTemplate,
@@ -65,7 +67,8 @@ function addDays(iso: string, days: number, months = 0): string {
 const filled = (items: MedicineItem[]) => items.filter((i) => i.drugName.trim())
 
 export default function PrescriptionScreen({ rxId: initialRxId, patientId, repeatFrom }: { rxId?: number; patientId?: number; repeatFrom?: number }) {
-  const { t, lang, navigate, setLeaveGuard } = useApp()
+  const { t, lang, navigate, setLeaveGuard, settings } = useApp()
+  const rf = settings.rxForm
   const [patient, setPatient] = useState<Patient | null>(null)
   const [rxId, setRxId] = useState<number | undefined>(initialRxId)
   const [form, setForm] = useState<RxForm>(EMPTY_FORM)
@@ -156,6 +159,12 @@ export default function PrescriptionScreen({ rxId: initialRxId, patientId, repea
   useEffect(() => {
     api.rx.diagnoses(dDx).then(setDxOptions).catch(() => setDxOptions([]))
   }, [dDx])
+
+  // A hidden section still shows when this prescription already has a value in it, so nothing is lost.
+  const showDx = rf.showDiagnosis || !!form.diagnosis
+  const showNotes = rf.showNotes || !!form.notes
+  const showLabs = rf.showLabTests || !!form.labTests
+  const showNext = rf.showNextVisit || !!form.nextVisit
 
   const setF = <K extends keyof RxForm>(k: K, v: RxForm[K]) => setForm((f) => ({ ...f, [k]: v }))
 
@@ -285,8 +294,43 @@ export default function PrescriptionScreen({ rxId: initialRxId, patientId, repea
               {t('c.new')}
             </Button>
           </Tooltip>
+          <TextInput type="date" w={165} size="md" value={form.date} onChange={(e) => setF('date', e.currentTarget.value)} aria-label={t('rx.date')} id="rx-date" />
+          {!rf.showSidePanel && (
+            <Menu position="bottom-end" width={300}>
+              <Menu.Target>
+                <Button variant="default" leftSection={<IconTemplate size={18} />} data-menu="templates">
+                  {t('rx.templates')}
+                </Button>
+              </Menu.Target>
+              <Menu.Dropdown>
+                {favorites.length === 0 && <Menu.Label>{t('rx.noTemplates')}</Menu.Label>}
+                {favorites.map((f) => (
+                  <Menu.Item key={f.id} onClick={() => insertTemplate(f)} data-template={f.name}>
+                    <Text fw={600} fz="sm">
+                      {f.name}
+                    </Text>
+                    <Text fz="xs" c="dimmed" dir="ltr" ta="left" lineClamp={1}>
+                      {f.items.map((i) => i.drugName).join(', ')}
+                    </Text>
+                  </Menu.Item>
+                ))}
+                <Menu.Divider />
+                <Menu.Item
+                  leftSection={<IconStar size={16} />}
+                  disabled={!filled(items).length}
+                  onClick={() => {
+                    setTplName(form.diagnosis)
+                    setTplOpen(true)
+                  }}
+                  id="save-template"
+                >
+                  {t('rx.saveAsTemplate')}
+                </Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
+          )}
           <Select
-            w={210}
+            w={190}
             size="md"
             value={layoutId}
             onChange={setLayoutId}
@@ -348,6 +392,33 @@ export default function PrescriptionScreen({ rxId: initialRxId, patientId, repea
                     </Group>
                   </div>
                   <Group gap={4} data-enter-skip>
+                    {!rf.showSidePanel && history.length > 0 && (
+                      <Menu position="bottom-end" width={320}>
+                        <Menu.Target>
+                          <Button variant="subtle" size="sm" leftSection={<IconHistory size={16} />} tabIndex={-1} data-menu="previous">
+                            {t('rx.previous')} ({history.length})
+                          </Button>
+                        </Menu.Target>
+                        <Menu.Dropdown>
+                          <Menu.Label>{t('pt.repeat')}</Menu.Label>
+                          {history.map((h) => (
+                            <Menu.Item key={h.id} onClick={() => repeatInto(h.id)}>
+                              <Group justify="space-between" wrap="nowrap">
+                                <Text fz="sm" fw={600}>
+                                  {formatDate(h.date, lang)}
+                                </Text>
+                                <Text fz="xs" c="dimmed" lineClamp={1}>
+                                  {h.diagnosis}
+                                </Text>
+                              </Group>
+                              <Text fz="xs" c="dimmed" dir="ltr" ta="left" lineClamp={1}>
+                                {h.drugsSummary}
+                              </Text>
+                            </Menu.Item>
+                          ))}
+                        </Menu.Dropdown>
+                      </Menu>
+                    )}
                     <Tooltip label={t('c.edit')}>
                       <ActionIcon variant="subtle" size="lg" onClick={() => setEditPatient(true)} tabIndex={-1}>
                         <IconEdit size={20} />
@@ -363,10 +434,10 @@ export default function PrescriptionScreen({ rxId: initialRxId, patientId, repea
               )}
             </div>
 
-            {/* Date & diagnosis */}
+            {/* Diagnosis (shown if enabled, or if this prescription already has one) */}
+            {showDx && (
             <div className="rx-card">
               <Group align="flex-end" wrap="nowrap">
-                <TextInput type="date" label={t('rx.date')} w={190} value={form.date} onChange={(e) => setF('date', e.currentTarget.value)} />
                 <Autocomplete
                   style={{ flex: 1 }}
                   label={t('rx.diagnosis')}
@@ -379,6 +450,7 @@ export default function PrescriptionScreen({ rxId: initialRxId, patientId, repea
                 />
               </Group>
             </div>
+            )}
 
             {/* Medicines */}
             <div className="rx-card" style={{ paddingInline: 10 }}>
@@ -390,39 +462,53 @@ export default function PrescriptionScreen({ rxId: initialRxId, patientId, repea
                   {t('rx.shortcuts')}
                 </Text>
               </Group>
-              <MedicinesEditor items={items} onChange={setItems} allergies={patient?.allergies} activeRow={activeRow} onActiveRow={setActiveRow} />
+              <MedicinesEditor
+                items={items}
+                onChange={setItems}
+                allergies={patient?.allergies}
+                activeRow={activeRow}
+                onActiveRow={setActiveRow}
+                fields={rf.medFields}
+                phrases={phrases.map((p) => p.text)}
+              />
             </div>
 
-            {/* Extra */}
-            <div className="rx-card">
-              <Text fw={700} mb="sm">
-                {t('rx.extra')}
-              </Text>
-              <SimpleGrid cols={2} spacing="md">
-                <Textarea label={t('rx.notes')} value={form.notes} onChange={(e) => setF('notes', e.currentTarget.value)} dir="auto" minRows={3} id="rx-notes" />
-                <Textarea label={t('rx.labTests')} value={form.labTests} onChange={(e) => setF('labTests', e.currentTarget.value)} dir="auto" minRows={3} id="rx-labs" />
-              </SimpleGrid>
-              <Group mt="md" align="flex-end">
-                <TextInput type="date" label={t('rx.nextVisit')} w={190} value={form.nextVisit} onChange={(e) => setF('nextVisit', e.currentTarget.value)} id="rx-next" />
-                <Group gap={6} data-enter-skip>
-                  {[
-                    ['+3', 3, 0],
-                    ['+7', 7, 0],
-                    ['+14', 14, 0],
-                    ['+1M', 0, 1]
-                  ].map(([label, d, m]) => (
-                    <Button key={String(label)} size="sm" variant="default" tabIndex={-1} onClick={() => setF('nextVisit', addDays(form.date, Number(d), Number(m)))}>
-                      <span dir="ltr">{label}</span>
-                    </Button>
-                  ))}
-                  {form.nextVisit && (
-                    <ActionIcon variant="subtle" color="gray" onClick={() => setF('nextVisit', '')} tabIndex={-1}>
-                      <IconX size={16} />
-                    </ActionIcon>
-                  )}
-                </Group>
-              </Group>
-            </div>
+            {/* Extra: advice, lab tests, next visit (each shown if enabled, or if it already has a value) */}
+            {(showNotes || showLabs || showNext) && (
+              <div className="rx-card">
+                {showLabs || showNext ? (
+                  <Text fw={700} mb="sm">
+                    {t('rx.extra')}
+                  </Text>
+                ) : null}
+                <SimpleGrid cols={showNotes && showLabs ? 2 : 1} spacing="md">
+                  {showNotes && <Textarea label={t('rx.notes')} value={form.notes} onChange={(e) => setF('notes', e.currentTarget.value)} dir="auto" minRows={showLabs ? 3 : 2} id="rx-notes" />}
+                  {showLabs && <Textarea label={t('rx.labTests')} value={form.labTests} onChange={(e) => setF('labTests', e.currentTarget.value)} dir="auto" minRows={3} id="rx-labs" />}
+                </SimpleGrid>
+                {showNext && (
+                  <Group mt={showNotes || showLabs ? 'md' : 0} align="flex-end">
+                    <TextInput type="date" label={t('rx.nextVisit')} w={190} value={form.nextVisit} onChange={(e) => setF('nextVisit', e.currentTarget.value)} id="rx-next" />
+                    <Group gap={6} data-enter-skip>
+                      {[
+                        ['+3', 3, 0],
+                        ['+7', 7, 0],
+                        ['+14', 14, 0],
+                        ['+1M', 0, 1]
+                      ].map(([label, d, m]) => (
+                        <Button key={String(label)} size="sm" variant="default" tabIndex={-1} onClick={() => setF('nextVisit', addDays(form.date, Number(d), Number(m)))}>
+                          <span dir="ltr">{label}</span>
+                        </Button>
+                      ))}
+                      {form.nextVisit && (
+                        <ActionIcon variant="subtle" color="gray" onClick={() => setF('nextVisit', '')} tabIndex={-1}>
+                          <IconX size={16} />
+                        </ActionIcon>
+                      )}
+                    </Group>
+                  </Group>
+                )}
+              </div>
+            )}
             {rxId && (
               <Group justify="flex-end">
                 <Button variant="subtle" color="red" leftSection={<IconTrash size={16} />} onClick={deleteRx}>
@@ -434,6 +520,7 @@ export default function PrescriptionScreen({ rxId: initialRxId, patientId, repea
         </ScrollArea>
 
         {/* Side panel */}
+        {rf.showSidePanel && (
         <ScrollArea className={classes.side} type="auto">
           <Stack gap="md" p="md" pt="sm">
             <div className="rx-card" style={{ padding: 14 }}>
@@ -515,6 +602,7 @@ export default function PrescriptionScreen({ rxId: initialRxId, patientId, repea
             </Text>
           </Stack>
         </ScrollArea>
+        )}
       </div>
 
       <Modal opened={tplOpen} onClose={() => setTplOpen(false)} title={t('rx.saveAsTemplate')}>

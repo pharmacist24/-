@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react'
 import {
   Alert,
   Button,
+  Checkbox,
+  Paper,
+  SimpleGrid,
   Code,
   Group,
   NumberInput,
@@ -24,11 +27,15 @@ import {
   IconFolder,
   IconInfoCircle,
   IconLanguage,
+  IconListDetails,
   IconLock,
   IconPrinter,
   IconRestore
 } from '@tabler/icons-react'
-import type { AppInfo, BackupInfo, ClinicProfile, LayoutRecord, PrinterInfo } from '@shared/types'
+import type { AppInfo, BackupInfo, ClinicProfile, LayoutRecord, MedicineItem, PrinterInfo, RxFormSettings, RxMedField } from '@shared/types'
+import { ALL_RX_MED_FIELDS, DETAILED_RX_FORM, SIMPLE_RX_FORM } from '@shared/defaults'
+import type { StringKey } from '../i18n'
+import MedicinesEditor, { doseLine } from '../components/MedicinesEditor'
 import { formatDate } from '@shared/text'
 import { api } from '../lib/api'
 import { useApp } from '../lib/app-context'
@@ -37,7 +44,7 @@ import ProfileForm from '../components/ProfileForm'
 
 export default function SettingsScreen() {
   const { t } = useApp()
-  const [tab, setTab] = useState<string | null>('clinic')
+  const [tab, setTab] = useState<string | null>('rxform')
   return (
     <div className="rx-page-wrap">
       <Title order={2} mb="md">
@@ -45,6 +52,9 @@ export default function SettingsScreen() {
       </Title>
       <Tabs value={tab} onChange={setTab} variant="outline" keepMounted={false}>
         <Tabs.List mb="md">
+          <Tabs.Tab value="rxform" leftSection={<IconListDetails size={18} />} data-tab="rxform">
+            {t('st.rxForm')}
+          </Tabs.Tab>
           <Tabs.Tab value="clinic" leftSection={<IconBuildingHospital size={18} />}>
             {t('st.clinic')}
           </Tabs.Tab>
@@ -65,6 +75,9 @@ export default function SettingsScreen() {
           </Tabs.Tab>
         </Tabs.List>
         <div className="rx-card" style={{ maxWidth: 900 }}>
+          <Tabs.Panel value="rxform">
+            <RxFormTab />
+          </Tabs.Panel>
           <Tabs.Panel value="clinic">
             <ClinicTab />
           </Tabs.Panel>
@@ -86,6 +99,103 @@ export default function SettingsScreen() {
         </div>
       </Tabs>
     </div>
+  )
+}
+
+const SAMPLE_DRUG = { dose: '1 tablet', frequency: 'every 12 hours', duration: '7 days', instructions: 'بعد الأكل' }
+
+/** Settings → Prescription screen: which boxes and sections the New prescription screen shows. */
+function RxFormTab() {
+  const { t, settings, updateSettings } = useApp()
+  const rf = settings.rxForm
+  const set = (patch: Partial<RxFormSettings>) => updateSettings({ rxForm: { ...rf, ...patch } }).catch((e) => notifyError(e, t))
+  const same = (a: RxFormSettings, b: RxFormSettings) => JSON.stringify(a) === JSON.stringify(b)
+  const sample = (fields: RxMedField[]): MedicineItem[] => [
+    {
+      drugName: 'Augmentin',
+      form: 'Tab',
+      strength: '1 g',
+      dose: doseLine(SAMPLE_DRUG, fields),
+      frequency: fields.includes('frequency') ? SAMPLE_DRUG.frequency : '',
+      duration: fields.includes('duration') ? SAMPLE_DRUG.duration : '',
+      route: fields.includes('route') ? 'Oral' : '',
+      instructions: fields.includes('instructions') ? SAMPLE_DRUG.instructions : ''
+    }
+  ]
+  const [preview, setPreview] = useState<MedicineItem[]>(() => sample(rf.medFields))
+  useEffect(() => setPreview(sample(rf.medFields)), [rf.medFields.join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const preset = (value: RxFormSettings, title: StringKey, hint: StringKey, id: string) => (
+    <Paper
+      withBorder
+      p="md"
+      radius="md"
+      style={{ cursor: 'pointer', borderColor: same(rf, value) ? 'var(--mantine-color-teal-6)' : undefined, background: same(rf, value) ? 'var(--mantine-color-teal-0)' : undefined }}
+      onClick={() => set(value)}
+      data-preset={id}
+    >
+      <Text fw={700}>{t(title)}</Text>
+      <Text fz="sm" c="dimmed">
+        {t(hint)}
+      </Text>
+    </Paper>
+  )
+  const sections: [keyof RxFormSettings, StringKey][] = [
+    ['showNotes', 'st.rxShowNotes'],
+    ['showDiagnosis', 'st.rxShowDiagnosis'],
+    ['showLabTests', 'st.rxShowLabTests'],
+    ['showNextVisit', 'st.rxShowNextVisit'],
+    ['showSidePanel', 'st.rxShowSidePanel']
+  ]
+  return (
+    <Stack gap="lg">
+      <Text c="dimmed">{t('st.rxFormHint')}</Text>
+      <SimpleGrid cols={2}>
+        {preset(SIMPLE_RX_FORM, 'st.rxSimple', 'st.rxSimpleHint', 'simple')}
+        {preset(DETAILED_RX_FORM, 'st.rxDetailed', 'st.rxDetailedHint', 'detailed')}
+      </SimpleGrid>
+      <div>
+        <Text fw={600} mb={6}>
+          {t('st.rxMedFields')}
+        </Text>
+        <SimpleGrid cols={3} spacing="xs">
+          <Checkbox label={t('rx.drug')} checked disabled />
+          <Checkbox label={t('rx.dose')} checked disabled />
+          {ALL_RX_MED_FIELDS.map((f) => (
+            <Checkbox
+              key={f}
+              label={t(`rx.${f}` as StringKey)}
+              checked={rf.medFields.includes(f)}
+              onChange={(e) => set({ medFields: e.currentTarget.checked ? [...rf.medFields, f] : rf.medFields.filter((x) => x !== f) })}
+              data-field-toggle={f}
+            />
+          ))}
+        </SimpleGrid>
+      </div>
+      <div>
+        <Text fw={600} mb={6}>
+          {t('st.rxSections')}
+        </Text>
+        <Stack gap="xs">
+          {sections.map(([k, label]) => (
+            <Switch key={k} label={t(label)} checked={!!rf[k]} onChange={(e) => set({ [k]: e.currentTarget.checked })} data-section-toggle={k} />
+          ))}
+        </Stack>
+      </div>
+      <div>
+        <Text fw={600} mb={6}>
+          {t('st.rxPreview')}
+        </Text>
+        <div style={{ pointerEvents: 'none' }} data-enter-skip>
+          <MedicinesEditor items={preview} onChange={setPreview} fields={rf.medFields} />
+        </div>
+        {rf.medFields.length < ALL_RX_MED_FIELDS.length && (
+          <Text fz="sm" c="dimmed" mt={4}>
+            {t('st.rxHiddenNote')}
+          </Text>
+        )}
+      </div>
+    </Stack>
   )
 }
 

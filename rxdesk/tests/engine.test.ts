@@ -115,6 +115,14 @@ describe('document rendering', () => {
     expect(html).toContain('<th dir="auto">الدواء</th>')
   })
 
+  it('table drops columns that are empty for every medicine', () => {
+    const el = sampleA4Layout().elements.find((e) => e.type === 'medicines')!
+    const simple = { ...data, rx: { ...data.rx, items: data.rx.items.map((i) => ({ ...i, frequency: '', duration: '', instructions: '' })) } }
+    const html = renderElementContent(el, simple, { page: 1, pages: 1, medIndexes: [0, 1] })
+    expect((html.match(/<col /g) ?? []).length).toBe(3) // #, drug, dose
+    expect(html).not.toContain('عدد المرات')
+  })
+
   it('hides empty prescription fields but keeps patient labels', () => {
     const empty = { ...data, rx: { ...data.rx, labTests: '', diagnosis: '' }, patient: { ...data.patient, weight: '' } }
     expect(renderElementContent(createElement('labTests'), empty, { page: 1, pages: 1, medIndexes: [] })).toBe('')

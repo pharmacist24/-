@@ -95,6 +95,14 @@ if (stage === 'm2') {
   await shot('09-settings-backup')
 }
 
+// Stages that exercise every field use the detailed prescription screen.
+if (['m3', 'm7'].includes(stage)) {
+  await page.click('[data-nav="settings"]')
+  await page.click('[data-tab="rxform"]')
+  await page.click('[data-preset="detailed"]')
+  await sleep(300)
+}
+
 if (stage !== 'm2') {
   const mod = await import(`./e2e-${stage}.mjs`)
   await mod.default({ page, app, shot, check, sleep, dataDir })

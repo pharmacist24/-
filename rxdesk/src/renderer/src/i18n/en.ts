@@ -441,6 +441,23 @@ export const en = {
   'st.version': 'Version',
   'st.offline': 'RxDesk works 100% offline. No account, no internet, no data leaves this computer.',
   'st.backupFailed': 'Automatic backup could not use the chosen folder. It was saved in the default folder instead.',
+  'rx.doseLine': 'Dose & instructions',
+  'rx.previous': 'Previous',
+  'st.rxForm': 'Prescription screen',
+  'st.rxFormHint': 'Choose what appears on the New prescription screen. Fewer boxes = faster typing. The drug name and the dose line are always shown.',
+  'st.rxSimple': 'Simple (recommended)',
+  'st.rxSimpleHint': 'Drug name + one dose line, and an advice box.',
+  'st.rxDetailed': 'Detailed',
+  'st.rxDetailedHint': 'Every field and section.',
+  'st.rxMedFields': 'Extra boxes for each medicine',
+  'st.rxSections': 'Parts of the screen',
+  'st.rxShowDiagnosis': 'Diagnosis',
+  'st.rxShowNotes': 'Advice / notes',
+  'st.rxShowLabTests': 'Lab tests requested',
+  'st.rxShowNextVisit': 'Next visit date',
+  'st.rxShowSidePanel': 'Side panel (dose phrases, templates, previous prescriptions)',
+  'st.rxPreview': 'What a medicine row will look like',
+  'st.rxHiddenNote': 'Hidden boxes are not lost: when you pick a drug, its usual frequency, duration and instructions are written into the dose line.',
   'st.profileSaved': 'Clinic information saved'
 }
 

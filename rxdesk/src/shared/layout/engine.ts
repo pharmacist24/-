@@ -236,7 +236,9 @@ function medicinesList(el: LayoutElement, d: PrintData, indexes: number[]): stri
 
 function medicinesTable(el: LayoutElement, d: PrintData, indexes: number[]): string {
   const m = el.medicines!
-  const cols = m.columns
+  // Columns that are empty for every medicine are left out (e.g. a simple prescription with only a dose line).
+  const always: MedicineColumn[] = ['number', 'drug', 'dose']
+  const cols = m.columns.filter((c) => always.includes(c) || d.rx.items.some((it) => (it[c as keyof Item] ?? '').trim()))
   const total = cols.reduce((s, c) => s + COLUMN_WIDTH[c], 0)
   const colgroup = cols.map((c) => `<col style="width:${n((COLUMN_WIDTH[c] / total) * 100)}%">`).join('')
   const head = m.showHeader

@@ -21,7 +21,7 @@
 1. اضغط **روشتة جديدة** (أو F1 أو Ctrl+N).
 2. اكتب اسم المريض أو رقم تليفونه واضغط **Enter** لاختياره. لمريض جديد اضغط **مريض جديد** واكتب الاسم والسن.
 3. اكتب **التشخيص** (تظهر التشخيصات السابقة تلقائياً).
-4. في **الأدوية**: اكتب أول حروف الدواء واضغط **Enter** فيُكتب الاسم والتركيز والجرعة تلقائياً من مكتبتك.
+4. في **الأدوية**: اكتب أول حروف الدواء واضغط **Enter** فيُكتب الاسم والتركيز والجرعة تلقائياً من مكتبتك. (عدد الخانات يُحدد من الإعدادات ← شاشة الروشتة.)
    - **Enter** ينقلك للحقل التالي، وبعد آخر حقل ينتقل للدواء التالي.
    - **جمل الجرعات** على الجانب: اضغط على أي جملة لتضعها في جرعة الدواء المحدد.
    - **القوالب**: اضغط على قالب (مثل "Tinea treatment") لإضافة كل أدويته مرة واحدة. لحفظ الروشتة الحالية كقالب اضغط ☆.
@@ -50,6 +50,11 @@
 - Ctrl+Z تراجع، Ctrl+Y إعادة، Ctrl+S حفظ. يمكنك حفظ أكثر من تصميم واختيار التصميم الافتراضي، وتصدير التصميم لملف لنقله لجهاز آخر.
 
 ## ٦. الإعدادات
+- **شاشة الروشتة**: اختر شكل شاشة الروشتة الجديدة:
+  - **بسيطة** (الافتراضي): اسم الدواء + سطر واحد للجرعة والتعليمات، وخانة للنصائح فقط.
+  - **تفصيلية**: كل الخانات (الشكل، التركيز، عدد المرات، المدة، الطريقة، التعليمات) والتشخيص والتحاليل وموعد الإعادة واللوحة الجانبية.
+  - أو اختر بنفسك أي خانة أو جزء يظهر. عند إخفاء خانة، تُكتب قيمتها المعتادة من مكتبة الأدوية داخل سطر الجرعة تلقائياً.
+  - القوالب متاحة من زر **القوالب** أعلى الشاشة، والروشتات السابقة من زر **السابقة** بجوار اسم المريض.
 - **الطباعة**: الطابعة الافتراضية، الطباعة المباشرة بدون نافذة، عدد النسخ.
 - **النسخ الاحتياطي**:
   - **نسخة احتياطية الآن** واحفظها على فلاشة USB (يُنصح بذلك أسبوعياً).
@@ -99,7 +104,7 @@ RxDesk works completely offline. No data ever leaves the computer.
    and age.
 3. Type the **diagnosis** (previous diagnoses are suggested).
 4. **Medicines**: type the first letters and press **Enter** — the name, strength and usual dose are filled in from
-   your own drug library.
+   your own drug library. (How many boxes appear is set in Settings → Prescription screen.)
    - **Enter** moves to the next field; after the last field it goes to the next medicine.
    - **Dose phrases** (right side): click a phrase to put it in the selected medicine's dose.
    - **Templates**: click one (e.g. "Tinea treatment") to add all its medicines at once. Click ☆ to save the current
@@ -133,6 +138,14 @@ In **Print designer** you decide how the prescription looks on paper:
   to move it to another PC.
 
 ## 6. Settings
+- **Prescription screen**: choose how the New prescription screen looks:
+  - **Simple** (default): drug name + one "dose & instructions" line, and an advice box.
+  - **Detailed**: every box (form, strength, frequency, duration, route, instructions) plus diagnosis, lab tests,
+    next visit and the side panel.
+  - Or tick exactly the boxes and parts you want. When a box is hidden, its usual value from your drug library is
+    written into the dose line automatically.
+  - Templates are in the **Templates** button at the top; previous prescriptions in the **Previous** button next to
+    the patient's name.
 - **Printing**: default printer, print directly without the dialog, number of copies.
 - **Backup**:
   - **Backup now** and save it on a USB stick (recommended weekly).

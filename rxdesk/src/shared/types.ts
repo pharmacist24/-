@@ -23,6 +23,19 @@ export interface AutoBackupSettings {
   lastRunAt: string
 }
 
+/** Optional medicine fields the doctor can show on the prescription screen (drug name and dose are always shown). */
+export type RxMedField = 'form' | 'strength' | 'frequency' | 'duration' | 'route' | 'instructions'
+
+/** What the prescription screen shows (Settings → Prescription screen). */
+export interface RxFormSettings {
+  medFields: RxMedField[]
+  showDiagnosis: boolean
+  showNotes: boolean
+  showLabTests: boolean
+  showNextVisit: boolean
+  showSidePanel: boolean
+}
+
 export interface AppSettings {
   setupCompleted: boolean
   language: Lang
@@ -33,6 +46,7 @@ export interface AppSettings {
   copies: number
   autoBackup: AutoBackupSettings
   pinEnabled: boolean
+  rxForm: RxFormSettings
 }
 
 export interface Patient {
