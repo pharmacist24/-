@@ -199,6 +199,8 @@ other sites; the printing window has no access to Node.js.
 
 ### Deploying the web app on Render
 
+**Live:** https://rxdesk-admin.onrender.com (Render static site `rxdesk-admin`, redeploys on every push to the branch).
+
 Settings (also in `rxdesk/render.yaml`): **Static Site**, repository `pharmacist24/-`, branch
 `claude/confident-babbage-4tsn1c`, Root Directory `rxdesk`, Build Command
 `npm ci --ignore-scripts && npm run build:web`, Publish Directory `web/dist`, environment variable
