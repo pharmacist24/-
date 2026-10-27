@@ -173,4 +173,8 @@ Choices made where the brief was open, picking the simplest option for a non-tec
   and certificates are respected.
 - **Hosting:** Supabase (database + auth + edge function) and Vercel (static web app). Free plans work for testing;
   Supabase's free plan pauses an inactive project, so a paid plan is advisable for real clinics.
+- **Sign-ups closed in the database** (trigger on `auth.users`): only e-mails in `admin_emails`, or e-mails the
+  admin-clinics function puts in `invited_emails` just before creating a clinic login, can get an account.
+- **Web hosting moved to Render** (static site `rxdesk-admin`, https://rxdesk-admin.onrender.com); `vercel.json`
+  stays as an alternative.
 

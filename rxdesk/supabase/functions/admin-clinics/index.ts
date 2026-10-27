@@ -51,7 +51,9 @@ Deno.serve(async (req: Request) => {
       const email = str('email').toLowerCase()
       const password = String(body.password ?? '')
       if (!name || !email || password.length < 8) return reply(400, { error: 'Name, e-mail and a password of 8+ characters are required' })
-      const { data: created, error } = await service.auth.admin.createUser({ email, password, email_confirm: true, app_metadata: { rxdesk_clinic: true } })
+      // Public sign-up is closed in the database; this e-mail is let through once.
+      await service.from('invited_emails').upsert({ email, created_at: new Date().toISOString() })
+      const { data: created, error } = await service.auth.admin.createUser({ email, password, email_confirm: true })
       if (error || !created.user) return reply(400, { error: error?.message ?? 'Could not create the user' })
       const { data: clinic, error: cErr } = await service
         .from('clinics')

@@ -179,10 +179,9 @@ other sites; the printing window has no access to Node.js.
 
 ### First-time setup
 
-1. **Admin account:** open the web app, choose "First time? Create the administrator account" and sign up with
-   `loaymis41@gmail.com` (only e-mails listed in `admin_emails` become admins). If Supabase sends a confirmation
-   e-mail, open the link, then sign in. Afterwards you can turn off new sign-ups in Supabase
-   (Authentication → Sign In / Providers → "Allow new users to sign up") — clinics are created by the admin anyway.
+1. **Admin account:** `loaymis41@gmail.com` (already created). Public sign-up is closed by a database trigger:
+   new logins are only created by the admin (New clinic) or for e-mails in `admin_emails`. Change the admin
+   password from the web app (Clinics page → "Change my password").
 2. **Clinic:** in the web app → New clinic → name, doctor e-mail and password.
 3. **Doctor:** in RxDesk → Settings → Online sync → enter that e-mail and password. An existing PC uploads its data;
    a new PC (from the setup wizard's "Already have an online clinic account?") downloads the clinic.
