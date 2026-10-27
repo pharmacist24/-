@@ -6,6 +6,7 @@ import type { Patient, PrescriptionListItem } from '@shared/types'
 import { formatAge, formatDate, genderText } from '@shared/text'
 import { api } from '../lib/api'
 import { useApp } from '../lib/app-context'
+import { IS_WEB } from '../lib/platform'
 import { notifyError, notifyOk } from '../lib/notify'
 import PatientFormModal from '../components/PatientFormModal'
 import { usePrinting } from '../print/usePrinting'
@@ -85,9 +86,11 @@ export default function PatientDetailScreen({ id }: { id: number }) {
           <Button variant="default" leftSection={<IconEdit size={18} />} onClick={() => setEditing(true)}>
             {t('c.edit')}
           </Button>
-          <Button leftSection={<IconFilePlus size={20} />} onClick={() => navigate({ name: 'rx', patientId: patient.id })} id="patient-new-rx">
-            {t('pt.newRx')}
-          </Button>
+          {!IS_WEB && (
+            <Button leftSection={<IconFilePlus size={20} />} onClick={() => navigate({ name: 'rx', patientId: patient.id })} id="patient-new-rx">
+              {t('pt.newRx')}
+            </Button>
+          )}
           <Menu position="bottom-end">
             <Menu.Target>
               <ActionIcon variant="default" size="lg">
@@ -149,7 +152,7 @@ export default function PatientDetailScreen({ id }: { id: number }) {
                 </Table.Thead>
                 <Table.Tbody>
                   {history.map((h) => (
-                    <Table.Tr key={h.id} className="rx-click-row" onClick={() => navigate({ name: 'rx', rxId: h.id })}>
+                    <Table.Tr key={h.id} className="rx-click-row" onClick={() => (IS_WEB ? printing.previewSaved(h.id) : navigate({ name: 'rx', rxId: h.id }))}>
                       <Table.Td style={{ whiteSpace: 'nowrap' }}>
                         {formatDate(h.date, lang)}
                         <Text fz="xs" c="dimmed">
@@ -165,7 +168,7 @@ export default function PatientDetailScreen({ id }: { id: number }) {
                       <Table.Td onClick={(e) => e.stopPropagation()} style={{ whiteSpace: 'nowrap' }}>
                         <Group gap={4} wrap="nowrap">
                           <Tooltip label={t('pt.view')}>
-                            <ActionIcon variant="subtle" size="lg" onClick={() => navigate({ name: 'rx', rxId: h.id })}>
+                            <ActionIcon variant="subtle" size="lg" onClick={() => (IS_WEB ? printing.previewSaved(h.id) : navigate({ name: 'rx', rxId: h.id }))}>
                               <IconEye size={20} />
                             </ActionIcon>
                           </Tooltip>
@@ -174,11 +177,13 @@ export default function PatientDetailScreen({ id }: { id: number }) {
                               <IconPrinter size={20} />
                             </ActionIcon>
                           </Tooltip>
-                          <Tooltip label={t('pt.repeat')}>
-                            <ActionIcon variant="subtle" size="lg" onClick={() => navigate({ name: 'rx', repeatFrom: h.id })} data-repeat={h.id}>
-                              <IconCopy size={20} />
-                            </ActionIcon>
-                          </Tooltip>
+                          {!IS_WEB && (
+                            <Tooltip label={t('pt.repeat')}>
+                              <ActionIcon variant="subtle" size="lg" onClick={() => navigate({ name: 'rx', repeatFrom: h.id })} data-repeat={h.id}>
+                                <IconCopy size={20} />
+                              </ActionIcon>
+                            </Tooltip>
+                          )}
                           <Tooltip label={t('rx.delete')}>
                             <ActionIcon variant="subtle" color="red" size="lg" onClick={() => delRx(h.id)}>
                               <IconTrash size={18} />

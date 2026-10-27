@@ -176,7 +176,7 @@ function CloudButton() {
   const st = syncState(s)
   return (
     <UnstyledButton
-      className="rx-lock-btn"
+      className="rx-cloud-btn"
       onClick={() => navigate({ name: 'settings', tab: 'sync' })}
       title={t(syncStateText(s))}
       id="cloud-status"

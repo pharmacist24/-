@@ -96,6 +96,22 @@
 كل البيانات في المجلد `%APPDATA%\RxDesk` (الإعدادات ← عن البرنامج ← فتح مجلد البيانات).
 إلغاء تثبيت البرنامج **لا يحذف** البيانات، وإعادة التثبيت تعيدها كما هي.
 
+## ١٠. المزامنة مع الإنترنت (اختياري)
+- البرنامج يعمل دائماً بدون إنترنت. المزامنة تحفظ نسخة من بيانات العيادة على الإنترنت ليديرها المسؤول من موقع RxDesk.
+- **التفعيل:** الإعدادات ← **المزامنة** ← اكتب البريد وكلمة المرور اللذين أعطاهما لك المسؤول ← **تسجيل الدخول والمزامنة**.
+- بعد ذلك تتم المزامنة تلقائياً: كل دقيقتين، وبعد أي تعديل بثوانٍ، وفور عودة الإنترنت. أيقونة السحابة أسفل القائمة الجانبية توضح الحالة.
+- إذا انقطع الإنترنت استمر في العمل عادي؛ التغييرات تنتظر وتُرسل عند عودة الاتصال.
+- **جهاز جديد:** في معالج الإعداد اضغط «لديك حساب عيادة على الإنترنت؟» وسجّل الدخول لتنزيل بياناتك.
+- ما يتغير من الموقع (أدوية جديدة، قوائم الجرعة، إعدادات الروشتة، تصميم الطباعة، بيانات العيادة) يظهر عندك تلقائياً.
+- الرقم السري والطابعة ومجلد النسخ الاحتياطي لا تخرج من الجهاز. **إيقاف المزامنة** لا يحذف أي بيانات من الجهاز.
+
+## ١١. موقع الإدارة (للمسؤول فقط)
+- افتح رابط الموقع وسجّل الدخول بحساب المسؤول.
+- **العيادات:** قائمة بكل العيادات وآخر مزامنة وعدد المرضى والروشتات. **عيادة جديدة** تنشئ حساب الطبيب (البريد وكلمة المرور).
+  من قائمة ⋯ يمكنك تغيير كلمة المرور أو إيقاف العيادة أو حذفها.
+- **فتح عيادة:** المرضى وسجلهم (مع معاينة وطباعة الروشتات)، التقارير، الأدوية (إضافة وتعديل واستيراد من إكسل)، تصميم الطباعة، والإعدادات.
+  كل تعديل يُحفظ على الإنترنت خلال ثانية (انظر شارة «تم حفظ كل التغييرات») ويصل لجهاز العيادة في المزامنة التالية.
+
 </div>
 
 ---
@@ -214,3 +230,19 @@ In **Print designer** you decide how the prescription looks on paper:
 ## 9. Where is my data?
 Everything is in `%APPDATA%\RxDesk` (Settings → About → Open data folder).
 Uninstalling RxDesk **does not delete** your data, and reinstalling brings it back as it was.
+
+## 10. Online sync (optional)
+- RxDesk always works without internet. Online sync keeps a copy of the clinic's data online so the administrator can manage it from the RxDesk web app.
+- **Turn it on:** Settings → **Online sync** → enter the e-mail and password the administrator gave you → **Sign in and sync**.
+- From then on it syncs by itself: every 2 minutes, a few seconds after a change, and as soon as the internet is back. The cloud icon at the bottom of the sidebar shows the state.
+- No internet? Keep working; changes wait and are sent when the connection returns.
+- **New PC:** in the setup wizard click "Already have an online clinic account?" and sign in to download your data.
+- Changes made online (new drugs, dose lists, prescription screen options, print layouts, clinic details) appear on your PC automatically.
+- PIN, printer and backup folder never leave the PC. **Stop syncing** does not delete anything from the PC.
+
+## 11. Admin web app (administrator only)
+- Open the web app address and sign in with the administrator account.
+- **Clinics:** every clinic with its last sync, patients and prescriptions. **New clinic** creates the doctor's login (e-mail + password).
+  The ⋯ menu resets the password, disables or deletes a clinic.
+- **Open a clinic:** patients and their history (preview / print prescriptions), reports, drug library (add, edit, Excel import), print designer and settings.
+  Every change is saved online within a second (see the "All changes saved online" badge) and reaches the clinic PC on its next sync.

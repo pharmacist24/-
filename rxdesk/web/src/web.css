@@ -1,0 +1,4 @@
+/* Web-only tweaks: the desktop layout assumes a full-height window without a header. */
+body {
+  background: #f4f6f9;
+}

@@ -144,3 +144,33 @@ Choices made where the brief was open, picking the simplest option for a non-tec
 - Previously the direction came from the first letter (`unicode-bidi: plaintext`), so a line starting with a number or
   an English word flipped to left-to-right. Each part is still isolated with `<bdi>` so numbers and English words inside
   an Arabic line read correctly. A box explicitly set to LTR/RTL in the designer keeps that setting.
+
+## Online version: sync + admin web app
+- **Offline first.** The desktop app still works with no internet; sync is off until the doctor signs in once
+  (Settings → Online sync). Nothing is sent before that.
+- **One synced table online** (`sync_rows`, a JSON record per row) instead of one Postgres table per local table:
+  the sync code is generic, a new local column syncs without an online migration, and RLS is written once.
+  The admin web app does not query Postgres directly; it downloads the clinic into an in-browser SQLite (sql.js)
+  and reuses the desktop `Repo`, so searches, reports and screens behave exactly like the desktop.
+- **Change tracking with SQLite triggers** (`uid`, a `dirty` change counter, `changed_at`, and a `sync_deletes`
+  log). Repository code did not change. Rows written by the sync itself are not re-marked (a `sync_apply` flag).
+- **Conflict rule: the newest edit wins**, per record, using the time of the edit (not of the upload). The server
+  also refuses to replace a newer version with an older one. Simple and predictable; clinic PCs need a correct clock.
+- **Settings merge per group** (clinic profile, prescription screen incl. dose lists, UI language, print language,
+  copies, silent printing) with a three-way merge; if both sides changed the same group, the online one wins.
+  Device things never leave the PC: PIN, printer, backup folder/schedule, "setup done".
+- **Pull cursor** = a server-side sequence; a per-clinic advisory lock in the trigger makes rows become visible
+  in sequence order, so a pull never skips a row.
+- **Starter data** (sample drugs, layouts, phrases) of a new install is uploaded only if the clinic has nothing
+  online yet; a new PC joining a clinic with data drops its starter data and takes the clinic's. The admin web app
+  never uploads starter data. Built-in diagnoses are identical everywhere and are uploaded only when edited.
+- **Same drug name / condition key on two PCs** becomes one record (the online one is kept).
+- **Doctor login** = e-mail + password created by the admin (edge function, service key only on the server).
+  The session is stored encrypted with Windows DPAPI (Electron `safeStorage`) in `cloud-session.bin`.
+- **Admins** are listed in `platform_admins`; `admin_emails` bootstraps the first one on sign-up. Only admins use
+  the web app; prescriptions are written on the desktop only (the web app can view/print them).
+- **Network** from the desktop goes through Chromium's network stack (`net.fetch`), so Windows proxy settings
+  and certificates are respected.
+- **Hosting:** Supabase (database + auth + edge function) and Vercel (static web app). Free plans work for testing;
+  Supabase's free plan pauses an inactive project, so a paid plan is advisable for real clinics.
+

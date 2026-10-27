@@ -41,6 +41,7 @@ import MedicinesEditor, { doseLine } from '../components/MedicinesEditor'
 import { formatDate } from '@shared/text'
 import { api } from '../lib/api'
 import { useApp } from '../lib/app-context'
+import { IS_WEB } from '../lib/platform'
 import { notifyError, notifyOk } from '../lib/notify'
 import ProfileForm from '../components/ProfileForm'
 import SyncTab from '../components/SyncPanel'
@@ -67,18 +68,22 @@ export default function SettingsScreen({ initialTab }: { initialTab?: string }) 
           <Tabs.Tab value="printing" leftSection={<IconPrinter size={18} />} data-tab="printing">
             {t('st.printing')}
           </Tabs.Tab>
-          <Tabs.Tab value="backup" leftSection={<IconDatabase size={18} />} data-tab="backup">
-            {t('st.backup')}
-          </Tabs.Tab>
-          <Tabs.Tab value="security" leftSection={<IconLock size={18} />} data-tab="security">
-            {t('st.security')}
-          </Tabs.Tab>
-          <Tabs.Tab value="sync" leftSection={<IconCloud size={18} />} data-tab="sync">
-            {t('sync.tab')}
-          </Tabs.Tab>
-          <Tabs.Tab value="about" leftSection={<IconInfoCircle size={18} />}>
-            {t('st.about')}
-          </Tabs.Tab>
+          {!IS_WEB && (
+            <>
+              <Tabs.Tab value="backup" leftSection={<IconDatabase size={18} />} data-tab="backup">
+                {t('st.backup')}
+              </Tabs.Tab>
+              <Tabs.Tab value="security" leftSection={<IconLock size={18} />} data-tab="security">
+                {t('st.security')}
+              </Tabs.Tab>
+              <Tabs.Tab value="sync" leftSection={<IconCloud size={18} />} data-tab="sync">
+                {t('sync.tab')}
+              </Tabs.Tab>
+              <Tabs.Tab value="about" leftSection={<IconInfoCircle size={18} />}>
+                {t('st.about')}
+              </Tabs.Tab>
+            </>
+          )}
         </Tabs.List>
         <div className="rx-card" style={{ maxWidth: 900 }}>
           <Tabs.Panel value="rxform">
@@ -363,12 +368,14 @@ function PrintingTab() {
   const def = layouts.find((l) => l.isDefault)
   return (
     <Stack gap="lg">
-      <Select
-        label={t('st.printer')}
-        value={settings.defaultPrinter || '__default'}
-        onChange={(v) => run({ defaultPrinter: v === '__default' ? '' : v ?? '' })}
-        data={[{ value: '__default', label: t('st.systemDefault') }, ...printers.map((p) => ({ value: p.name, label: p.displayName }))]}
-      />
+      {!IS_WEB && (
+        <Select
+          label={t('st.printer')}
+          value={settings.defaultPrinter || '__default'}
+          onChange={(v) => run({ defaultPrinter: v === '__default' ? '' : v ?? '' })}
+          data={[{ value: '__default', label: t('st.systemDefault') }, ...printers.map((p) => ({ value: p.name, label: p.displayName }))]}
+        />
+      )}
       <Switch
         label={t('st.silent')}
         description={t('st.silentHint')}

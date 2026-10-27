@@ -44,15 +44,17 @@ export function useT(): TFunction {
 export function AppProvider({
   initialSettings,
   initialProfile,
+  initialRoute,
   children
 }: {
   initialSettings: AppSettings
   initialProfile: ClinicProfile
+  initialRoute?: Route
   children: ReactNode
 }) {
   const [settings, setSettings] = useState<AppSettings>(initialSettings ?? DEFAULT_SETTINGS)
   const [profile, setProfile] = useState<ClinicProfile>(initialProfile ?? EMPTY_PROFILE)
-  const [route, setRoute] = useState<Route>({ name: 'rx', key: Date.now() })
+  const [route, setRoute] = useState<Route>(initialRoute ?? { name: 'rx', key: Date.now() })
   const guard = useRef<(() => boolean) | null>(null)
   const { setDirection } = useDirection()
   const lang = settings.language

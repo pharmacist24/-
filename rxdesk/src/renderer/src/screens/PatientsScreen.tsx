@@ -6,6 +6,7 @@ import type { PatientListItem } from '@shared/types'
 import { formatAge, formatDate, genderText } from '@shared/text'
 import { api } from '../lib/api'
 import { useApp } from '../lib/app-context'
+import { IS_WEB } from '../lib/platform'
 import { notifyError } from '../lib/notify'
 import PatientFormModal from '../components/PatientFormModal'
 
@@ -85,11 +86,13 @@ export default function PatientsScreen() {
                 <Table.Td>{formatDate(p.lastVisit, lang)}</Table.Td>
                 <Table.Td>{p.prescriptionCount}</Table.Td>
                 <Table.Td onClick={(e) => e.stopPropagation()}>
-                  <Tooltip label={t('pt.newRx')}>
-                    <ActionIcon variant="light" size="lg" onClick={() => navigate({ name: 'rx', patientId: p.id })}>
-                      <IconFilePlus size={20} />
-                    </ActionIcon>
-                  </Tooltip>
+                  {!IS_WEB && (
+                    <Tooltip label={t('pt.newRx')}>
+                      <ActionIcon variant="light" size="lg" onClick={() => navigate({ name: 'rx', patientId: p.id })}>
+                        <IconFilePlus size={20} />
+                      </ActionIcon>
+                    </Tooltip>
+                  )}
                 </Table.Td>
               </Table.Tr>
             ))}

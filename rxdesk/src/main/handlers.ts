@@ -8,7 +8,7 @@ import { blankLayout, normalizeLayout, sampleA4Layout, sampleA5Layout } from '@s
 import { createBackup, listAutoBackups, manualBackupName, prepareRestore } from './services/backup'
 import { hashPin, isValidPin, PinThrottle, verifyPin } from './services/pin'
 import { htmlToPdf, listPrinters, printHtml } from './services/print'
-import { toCsv } from './services/csv'
+import { patientsCsv, prescriptionsCsv } from '@shared/csv'
 import { planImport, readDrugFile, TEMPLATE_ROWS, writeDrugsXlsx } from './services/drugsExcel'
 
 /** Reads an Excel/CSV drug sheet; unreadable files become a friendly BAD_FILE error. */
@@ -20,7 +20,7 @@ async function readDrugs(file: string) {
     throw new AppError('BAD_FILE', 'This file could not be read')
   }
 }
-import { formatAge, genderText, todayIso } from '@shared/text'
+import { todayIso } from '@shared/text'
 import { log, getLogFile } from './logger'
 import { state, replaceDatabase, runAutoBackup, autoBackupFolder } from './state'
 import * as cloud from './sync/service'
@@ -384,20 +384,7 @@ export const handlers: Handlers = {
         filters: [{ name: 'CSV (Excel)', extensions: ['csv'] }]
       })
       if (res.canceled || !res.filePath) return null
-      const lang = repo().getSettings().language
-      const rows = repo().allPatients().map((p) => ({
-        ...p,
-        age: formatAge(p.birthDate, lang),
-        genderText: genderText(p.gender, lang)
-      }))
-      const headers = lang === 'ar'
-        ? ['رقم', 'الاسم', 'تاريخ الميلاد', 'السن', 'النوع', 'الهاتف', 'الوزن', 'الحساسية', 'الأمراض المزمنة', 'ملاحظات', 'تاريخ الإضافة']
-        : ['ID', 'Name', 'Birth date', 'Age', 'Gender', 'Phone', 'Weight', 'Allergies', 'Chronic diseases', 'Notes', 'Created']
-      fs.writeFileSync(
-        res.filePath,
-        toCsv(headers, rows as any, ['id', 'name', 'birthDate', 'age', 'genderText', 'phone', 'weight', 'allergies', 'chronicDiseases', 'notes', 'createdAt']),
-        'utf8'
-      )
+      fs.writeFileSync(res.filePath, patientsCsv(repo().allPatients(), repo().getSettings().language), 'utf8')
       return res.filePath
     },
     async prescriptionsCsv() {
@@ -406,12 +393,7 @@ export const handlers: Handlers = {
         filters: [{ name: 'CSV (Excel)', extensions: ['csv'] }]
       })
       if (res.canceled || !res.filePath) return null
-      const lang = repo().getSettings().language
-      const keys = ['prescription_id', 'date', 'patient_name', 'phone', 'diagnosis', 'line', 'drug_name', 'form', 'strength', 'dose', 'frequency', 'duration', 'route', 'instructions', 'notes', 'lab_tests', 'next_visit']
-      const headers = lang === 'ar'
-        ? ['رقم الروشتة', 'التاريخ', 'المريض', 'الهاتف', 'التشخيص', 'السطر', 'الدواء', 'الشكل', 'التركيز', 'الجرعة', 'التكرار', 'المدة', 'طريقة الاستخدام', 'تعليمات', 'ملاحظات', 'تحاليل', 'الإعادة']
-        : ['Prescription', 'Date', 'Patient', 'Phone', 'Diagnosis', 'Line', 'Drug', 'Form', 'Strength', 'Dose', 'Frequency', 'Duration', 'Route', 'Instructions', 'Advice', 'Lab tests', 'Next visit']
-      fs.writeFileSync(res.filePath, toCsv(headers, repo().exportPrescriptionRows(), keys), 'utf8')
+      fs.writeFileSync(res.filePath, prescriptionsCsv(repo().exportPrescriptionRows(), repo().getSettings().language), 'utf8')
       return res.filePath
     }
   },

@@ -25,7 +25,8 @@ body {
   font-size: 1.02rem;
 }
 
-.rx-lock-btn {
+.rx-lock-btn,
+.rx-cloud-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -36,7 +37,13 @@ body {
   font-weight: 600;
 }
 
-.rx-lock-btn:hover {
+.rx-cloud-btn {
+  font-size: 13px;
+  padding: 6px;
+}
+
+.rx-lock-btn:hover,
+.rx-cloud-btn:hover {
   background: #f1f3f5;
 }
 
