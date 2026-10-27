@@ -176,21 +176,13 @@ function SignIn({ t, lang, setLang }: { t: WT; lang: WebLang; setLang: (l: WebLa
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const [info, setInfo] = useState('')
-  const [creating, setCreating] = useState(false)
 
   const submit = async () => {
     setBusy(true)
     setError('')
     try {
-      if (creating) {
-        const { data, error } = await supabase.auth.signUp({ email: email.trim(), password })
-        if (error) throw error
-        if (!data.session) setInfo(t('checkMail'))
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
-        if (error) throw error
-      }
+      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
+      if (error) throw error
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -208,7 +200,7 @@ function SignIn({ t, lang, setLang }: { t: WT; lang: WebLang; setLang: (l: WebLa
             </Text>
             <LangSwitch lang={lang} setLang={setLang} />
           </Group>
-          <Title order={3}>{creating ? t('createAdmin') : t('signInTitle')}</Title>
+          <Title order={3}>{t('signInTitle')}</Title>
           <TextInput label={t('email')} value={email} onChange={(e) => setEmail(e.currentTarget.value)} dir="ltr" id="admin-email" autoComplete="username" />
           <PasswordInput
             label={t('password')}
@@ -219,12 +211,8 @@ function SignIn({ t, lang, setLang }: { t: WT; lang: WebLang; setLang: (l: WebLa
             onKeyDown={(e) => e.key === 'Enter' && submit()}
           />
           {error && <Alert color="red">{error}</Alert>}
-          {info && <Alert color="teal">{info}</Alert>}
           <Button onClick={submit} loading={busy} disabled={!email || password.length < 6} id="admin-signin">
-            {creating ? t('createAdminBtn') : t('signIn')}
-          </Button>
-          <Button variant="subtle" size="xs" onClick={() => setCreating(!creating)}>
-            {creating ? t('signIn') : t('createAdmin')}
+            {t('signIn')}
           </Button>
         </Stack>
       </Paper>
@@ -244,6 +232,7 @@ function Clinics({ t, lang, setLang, email, onOpen }: { t: WT; lang: WebLang; se
   const [creating, setCreating] = useState(false)
   const [resetFor, setResetFor] = useState<ClinicRow | null>(null)
   const [deleteFor, setDeleteFor] = useState<ClinicRow | null>(null)
+  const [myPassword, setMyPassword] = useState(false)
 
   const load = useCallback(() => {
     listClinics()
@@ -278,6 +267,9 @@ function Clinics({ t, lang, setLang, email, onOpen }: { t: WT; lang: WebLang; se
           <Text fz="sm" c="dimmed" dir="ltr">
             {email}
           </Text>
+          <Button variant="default" leftSection={<IconKey size={16} />} onClick={() => setMyPassword(true)} id="my-password">
+            {t('myPassword')}
+          </Button>
           <Button variant="default" leftSection={<IconLogout size={16} />} onClick={() => supabase.auth.signOut()}>
             {t('signOut')}
           </Button>
@@ -367,6 +359,7 @@ function Clinics({ t, lang, setLang, email, onOpen }: { t: WT; lang: WebLang; se
       <NewClinicModal t={t} opened={creating} onClose={() => setCreating(false)} onCreated={load} />
       <PasswordModal t={t} clinic={resetFor} onClose={() => setResetFor(null)} />
       <DeleteModal t={t} clinic={deleteFor} onClose={() => setDeleteFor(null)} onDeleted={load} />
+      <MyPasswordModal t={t} opened={myPassword} onClose={() => setMyPassword(false)} />
     </Box>
   )
 }
@@ -453,6 +446,46 @@ function PasswordModal({ t, clinic, onClose }: { t: WT; clinic: ClinicRow | null
         <TextInput label={t('newPassword')} value={password} onChange={(e) => setPassword(e.currentTarget.value)} dir="ltr" />
         <Group justify="flex-end">
           <Button onClick={submit} loading={busy} disabled={password.length < 8}>
+            {t('save')}
+          </Button>
+        </Group>
+      </Stack>
+    </Modal>
+  )
+}
+
+function MyPasswordModal({ t, opened, onClose }: { t: WT; opened: boolean; onClose: () => void }) {
+  const [password, setPassword] = useState('')
+  const [password2, setPassword2] = useState('')
+  const [busy, setBusy] = useState(false)
+  const submit = async () => {
+    setBusy(true)
+    try {
+      const { error } = await supabase.auth.updateUser({ password })
+      if (error) throw error
+      notifications.show({ color: 'teal', message: t('passwordChanged') })
+      setPassword('')
+      setPassword2('')
+      onClose()
+    } catch (e) {
+      notifications.show({ color: 'red', message: (e as Error).message })
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <Modal opened={opened} onClose={onClose} title={t('myPassword')} centered>
+      <Stack>
+        <PasswordInput label={t('newPassword')} value={password} onChange={(e) => setPassword(e.currentTarget.value)} dir="ltr" />
+        <PasswordInput
+          label={t('confirmPassword')}
+          value={password2}
+          onChange={(e) => setPassword2(e.currentTarget.value)}
+          dir="ltr"
+          error={password2 && password !== password2 ? t('passwordMismatch') : undefined}
+        />
+        <Group justify="flex-end">
+          <Button onClick={submit} loading={busy} disabled={password.length < 8 || password !== password2}>
             {t('save')}
           </Button>
         </Group>

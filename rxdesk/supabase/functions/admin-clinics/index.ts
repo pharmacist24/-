@@ -51,7 +51,7 @@ Deno.serve(async (req: Request) => {
       const email = str('email').toLowerCase()
       const password = String(body.password ?? '')
       if (!name || !email || password.length < 8) return reply(400, { error: 'Name, e-mail and a password of 8+ characters are required' })
-      const { data: created, error } = await service.auth.admin.createUser({ email, password, email_confirm: true })
+      const { data: created, error } = await service.auth.admin.createUser({ email, password, email_confirm: true, app_metadata: { rxdesk_clinic: true } })
       if (error || !created.user) return reply(400, { error: error?.message ?? 'Could not create the user' })
       const { data: clinic, error: cErr } = await service
         .from('clinics')

@@ -28,7 +28,9 @@ export default async function ({ page, app, shot, check, sleep }) {
   const desk = (method, ...args) => page.evaluate(([m, a]) => window.rxdesk.invoke(m, a), [method, args])
   const deskStatus = async () => (await desk('sync.status')).data
 
-  const server = spawn('npx', ['vite', 'preview', '--config', 'web/vite.config.ts', '--port', '5181', '--strictPort'], { stdio: 'ignore', detached: true })
+  // WEB_URL=https://rxdesk-admin.onrender.com tests the deployed site instead of a local preview.
+  const webUrl = process.env.WEB_URL || 'http://127.0.0.1:5181/'
+  const server = process.env.WEB_URL ? null : spawn('npx', ['vite', 'preview', '--config', 'web/vite.config.ts', '--port', '5181', '--strictPort'], { stdio: 'ignore', detached: true })
   const browser = await chromium.launch({
     executablePath: process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium',
     args: proxy ? ['--proxy-server=' + proxy] : []
@@ -47,7 +49,7 @@ export default async function ({ page, app, shot, check, sleep }) {
     }
 
     // ---------------------------------------------------------------- admin creates the clinic
-    await web.goto('http://127.0.0.1:5181/')
+    await web.goto(webUrl)
     await web.waitForSelector('#admin-email', { timeout: 30000 })
     await wshot('online-01-admin-login')
     await web.fill('#admin-email', adminEmail)
@@ -205,7 +207,7 @@ export default async function ({ page, app, shot, check, sleep }) {
     }
     await browser.close().catch(() => {})
     try {
-      process.kill(-server.pid)
+      if (server) process.kill(-server.pid)
     } catch {
       /* already stopped */
     }
