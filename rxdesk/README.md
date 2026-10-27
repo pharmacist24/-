@@ -197,6 +197,15 @@ other sites; the printing window has no access to Node.js.
    `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`.
 5. Deploy, then in Supabase → Authentication → URL Configuration set the **Site URL** to the Vercel address.
 
+### Deploying the web app on Render
+
+Settings (also in `rxdesk/render.yaml`): **Static Site**, repository `pharmacist24/-`, branch
+`claude/confident-babbage-4tsn1c`, Root Directory `rxdesk`, Build Command
+`npm ci --ignore-scripts && npm run build:web`, Publish Directory `web/dist`, environment variable
+`NODE_VERSION=22`. Render asks for a payment card on the account before creating any service, even on the free
+static-site plan. After the first deploy, set Supabase → Authentication → URL Configuration → **Site URL** to the
+`https://….onrender.com` address.
+
 ### Tests of the online part
 
 - `npm test` includes the sync engine (fake server) and the in-browser database.

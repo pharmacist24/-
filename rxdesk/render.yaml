@@ -1,0 +1,26 @@
+# Render Blueprint for the RxDesk Admin web app (static site, free plan).
+# Render dashboard → New → Blueprint → pick this repository (it finds rxdesk/render.yaml).
+services:
+  - type: web
+    runtime: static
+    name: rxdesk-admin
+    rootDir: rxdesk
+    buildCommand: npm ci --ignore-scripts && npm run build:web
+    staticPublishPath: web/dist
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: no-referrer
