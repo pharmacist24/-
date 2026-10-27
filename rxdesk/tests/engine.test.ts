@@ -6,6 +6,7 @@ import {
   paginate,
   printDataFromPrescription,
   renderDocument,
+  renderElement,
   renderElementContent,
   samplePrintData,
   usedFamilies
@@ -102,7 +103,7 @@ describe('document rendering', () => {
     const el = sampleA5Layout().elements.find((e) => e.type === 'medicines')!
     const html = renderElementContent(el, data, { page: 1, pages: 1, medIndexes: [0] })
     expect(html).toContain('class="rx-med-line1" dir="ltr"')
-    expect(html).toContain('class="rx-med-line2" dir="auto"')
+    expect(html).toContain('class="rx-med-line2" dir="rtl"') // contains Arabic → right-to-left
     expect(html).toContain('<bdi>بعد الأكل</bdi>')
   })
 
@@ -113,7 +114,7 @@ describe('document rendering', () => {
     // the eye column is empty in the sample, so it is left out
     expect(widths.length).toBe(el.medicines!.columns.filter((c) => c !== 'site').length)
     expect(Math.round(widths.reduce((a, b) => a + b, 0))).toBe(100)
-    expect(html).toContain('<th dir="auto">الدواء</th>')
+    expect(html).toContain('<th dir="rtl">الدواء</th>')
   })
 
   it('table drops columns that are empty for every medicine', () => {
@@ -135,6 +136,38 @@ describe('document rendering', () => {
     const eye = { ...data, rx: { ...data.rx, items: [{ drugName: 'Tobradex', form: '', strength: '', dose: 'قطرتين', frequency: '4 مرات يومياً', duration: '', route: '', instructions: '', site: 'العين اليمنى' }] } }
     const html = renderElementContent(el, eye, { page: 1, pages: 1, medIndexes: [0] })
     expect(html).toContain('<bdi>قطرتين</bdi> <span class="rx-sep">—</span> <bdi>4 مرات يومياً</bdi> <span class="rx-sep">—</span> <bdi>العين اليمنى</bdi>')
+  })
+
+  it('instructions with Arabic always print right-to-left, English-only stay left-to-right', () => {
+    const el = sampleA5Layout().elements.find((e) => e.type === 'medicines')!
+    const mk = (dose: string, instructions: string) => ({
+      ...data,
+      rx: { ...data.rx, items: [{ drugName: 'X', form: '', strength: '', dose, frequency: '', duration: '', route: '', instructions }] }
+    })
+    const line2 = (h: string) => h.match(/class="rx-med-line2" dir="(\w+)"/)![1]
+    // starts with a number/English word but contains Arabic → still RTL
+    expect(line2(renderElementContent(el, mk('2 drops', 'بعد الأكل'), { page: 1, pages: 1, medIndexes: [0] }))).toBe('rtl')
+    expect(line2(renderElementContent(el, mk('1 tablet', 'after food'), { page: 1, pages: 1, medIndexes: [0] }))).toBe('ltr')
+    // table cells
+    const tbl = sampleA4Layout().elements.find((e) => e.type === 'medicines')!
+    const t = renderElementContent(tbl, mk('قطرتين', 'after food'), { page: 1, pages: 1, medIndexes: [0] })
+    expect(t).toContain('<td dir="rtl" style="font-size:10pt">قطرتين</td>')
+    expect(t).toContain('<td dir="auto" style="font-size:10pt">after food</td>')
+  })
+
+  it('advice lines with Arabic read right-to-left even when they start with English', () => {
+    const notes = createElement('notes')
+    const d2 = { ...data, rx: { ...data.rx, notes: 'CBC بعد أسبوع\nVitamin C' } }
+    const html = renderElement(notes, d2, { page: 1, pages: 1, medIndexes: [] })
+    expect(html).toContain('class="rx-el rx-el-notes" dir="rtl"')
+    expect(html).toContain('<bdi class="rx-line" dir="rtl">CBC بعد أسبوع</bdi>')
+    expect(html).toContain('<bdi class="rx-line" dir="ltr">Vitamin C</bdi>')
+    // an element set to LTR in the designer keeps it
+    const ltr = { ...notes, style: { ...notes.style, direction: 'ltr' as const } }
+    expect(renderElement(ltr, d2, { page: 1, pages: 1, medIndexes: [] })).toContain('dir="ltr"')
+    // English-only notes are unchanged
+    const en = { ...data, rx: { ...data.rx, notes: 'Rest' } }
+    expect(renderElement(notes, en, { page: 1, pages: 1, medIndexes: [] })).not.toContain('rx-line')
   })
 
   it('free text placeholders', () => {

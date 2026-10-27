@@ -174,3 +174,10 @@ export function escapeHtml(input: string): string {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
 }
+
+const ARABIC_RE = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/
+
+/** True if the text contains any Arabic letter (used to print instructions right-to-left). */
+export function hasArabic(text: string): boolean {
+  return ARABIC_RE.test(text || '')
+}

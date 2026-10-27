@@ -1,5 +1,8 @@
 // Dose dropdowns: amount / frequency / eye, editable lists in Settings.
-export default async function ({ page, shot, check, sleep }) {
+import fs from 'fs'
+import path from 'path'
+
+export default async function ({ page, app, shot, check, sleep }) {
   const newRx = async (q) => {
     await page.click('[data-nav="rx"]')
     await page.waitForSelector('#patient-picker')
@@ -81,6 +84,25 @@ export default async function ({ page, shot, check, sleep }) {
   await sleep(1200)
   const text = await page.frameLocator('#preview-frame').locator('.rx-el-medicines').textContent()
   check(text.includes('قطرة واحدة — كل 3 ساعات — العين اليمنى') && text.includes('العينين'), 'printout shows amount — frequency — eye')
+  const geo = await page.evaluate(() => {
+    const doc = document.querySelector('#preview-frame').contentDocument
+    const box = doc.querySelector('.rx-el-medicines').getBoundingClientRect()
+    return [...doc.querySelectorAll('.rx-med-line2')].map((l) => {
+      const range = doc.createRange()
+      range.selectNodeContents(l)
+      return { dir: getComputedStyle(l).direction, gap: box.right - range.getBoundingClientRect().right }
+    })
+  })
+  check(geo.length === 2 && geo.every((g) => g.dir === 'rtl' && g.gap < 3), 'instruction lines print right-to-left and right-aligned: ' + JSON.stringify(geo))
+  const pdf = path.resolve('test-output/rx-eye.pdf')
+  fs.rmSync(pdf, { force: true })
+  await app.evaluate(({ dialog, shell }, f) => {
+    dialog.showSaveDialog = async () => ({ canceled: false, filePath: f })
+    shell.openPath = async () => ''
+  }, pdf)
+  await page.click('#preview-pdf')
+  for (let i = 0; i < 40 && !fs.existsSync(pdf); i++) await sleep(250)
+  check(fs.existsSync(pdf), 'PDF saved')
   await shot('93-eye-preview')
   await page.keyboard.press('Escape')
 

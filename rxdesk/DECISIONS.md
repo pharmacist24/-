@@ -136,3 +136,11 @@ Choices made where the brief was open, picking the simplest option for a non-tec
 - The eye is stored in its own `site` column (migration v3) and printed as its own column/part after the frequency, so
   it never mixes with route or instructions. Layouts made before layout v2 get the column added once; it is dropped
   automatically from tables when no medicine has an eye.
+
+## Right-to-left instructions on the printout
+- Printed instruction text that contains any Arabic is laid out right-to-left and right-aligned: the line under each
+  drug, table cells/headers, and advice / lab tests / diagnosis / address / free-text boxes (per line). Text with no
+  Arabic stays left-to-right. Drug names stay left-to-right.
+- Previously the direction came from the first letter (`unicode-bidi: plaintext`), so a line starting with a number or
+  an English word flipped to left-to-right. Each part is still isolated with `<bdi>` so numbers and English words inside
+  an Arabic line read correctly. A box explicitly set to LTR/RTL in the designer keeps that setting.

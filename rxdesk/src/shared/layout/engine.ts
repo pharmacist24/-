@@ -4,7 +4,7 @@
 // print/preview/PDF pipeline (whole document), so what the doctor designs is
 // exactly what prints. All geometry is in millimetres, fonts in points.
 
-import { escapeHtml, formatDate, genderText } from '../text'
+import { escapeHtml, formatDate, genderText, hasArabic } from '../text'
 import type { Prescription, ClinicProfile } from '../types'
 import type { FontFamily, Layout, LayoutElement, MedicineColumn, MedicinesOptions, PrintData } from './types'
 import { qrSvg } from './qr'
@@ -176,6 +176,19 @@ export function elementValue(el: LayoutElement, d: PrintData, page = 1, pages = 
 const HIDE_WHEN_EMPTY = new Set(['diagnosis', 'notes', 'labTests', 'nextVisit', 'prescriptionId', 'clinicAddress', 'clinicPhone', 'licenseNumber', 'clinicName', 'specialtyAr', 'specialtyEn', 'doctorNameAr', 'doctorNameEn'])
 const MULTILINE = new Set(['notes', 'labTests', 'diagnosis', 'clinicAddress', 'text'])
 
+/**
+ * Each line of a multi-line text gets its own direction: lines containing Arabic are right-to-left
+ * (even if they start with a number or an English word), other lines left-to-right.
+ * Input is already-escaped HTML without tags spanning lines.
+ */
+function linesWithDirection(html: string): string {
+  if (!hasArabic(html)) return html
+  return html
+    .split('\n')
+    .map((line) => `<bdi class="rx-line" dir="${hasArabic(line) ? 'rtl' : 'ltr'}">${line}</bdi>`)
+    .join('\n')
+}
+
 // ------------------------------------------------------------------ medicines
 
 const COLUMN_WIDTH: Record<MedicineColumn, number> = {
@@ -228,8 +241,9 @@ function medicinesList(el: LayoutElement, d: PrintData, indexes: number[]): stri
   const rows = indexes.map((i) => {
     const it = d.rx.items[i]
     const parts = detailParts(it, m.columns)
+    // Instructions containing Arabic always read right-to-left (each part stays isolated in its own <bdi>).
     const line2 = parts.length
-      ? `<div class="rx-med-line2" dir="auto" style="font-size:${n(m.detailFontSizePt)}pt">${parts.join(' <span class="rx-sep">—</span> ')}</div>`
+      ? `<div class="rx-med-line2" dir="${hasArabic(parts.join(' ')) ? 'rtl' : 'ltr'}" style="font-size:${n(m.detailFontSizePt)}pt">${parts.join(' <span class="rx-sep">—</span> ')}</div>`
       : ''
     return `<div class="rx-med-item" data-med="${i}" style="margin-bottom:${n(m.rowGapMm)}mm"><div class="rx-med-line1" dir="ltr">${numbered ? `<span class="rx-med-num">${i + 1}.</span>` : ''}${drugLine(it, m)}</div>${line2}</div>`
   })
@@ -244,13 +258,16 @@ function medicinesTable(el: LayoutElement, d: PrintData, indexes: number[]): str
   const total = cols.reduce((s, c) => s + COLUMN_WIDTH[c], 0)
   const colgroup = cols.map((c) => `<col style="width:${n((COLUMN_WIDTH[c] / total) * 100)}%">`).join('')
   const head = m.showHeader
-    ? `<thead><tr>${cols.map((c) => `<th dir="auto">${escapeHtml(columnLabel(m, c, d.lang))}</th>`).join('')}</tr></thead>`
+    ? `<thead><tr>${cols.map((c) => `<th dir="${hasArabic(columnLabel(m, c, d.lang)) ? 'rtl' : 'auto'}">${escapeHtml(columnLabel(m, c, d.lang))}</th>`).join('')}</tr></thead>`
     : ''
   const cell = (it: Item, i: number, c: MedicineColumn): string => {
     switch (c) {
       case 'number': return `<td class="rx-c-num">${i + 1}</td>`
       case 'drug': return `<td dir="ltr" class="rx-c-drug">${drugLine(it, m)}</td>`
-      default: return `<td dir="auto" style="font-size:${n(m.detailFontSizePt)}pt">${escapeHtml(it[c] ?? '')}</td>`
+      default: {
+        const v = it[c] ?? ''
+        return `<td dir="${hasArabic(v) ? 'rtl' : 'auto'}" style="font-size:${n(m.detailFontSizePt)}pt">${escapeHtml(v)}</td>`
+      }
     }
   }
   const body = indexes.map((i) => `<tr data-med="${i}">${cols.map((c) => cell(d.rx.items[i], i, c)).join('')}</tr>`).join('')
@@ -302,12 +319,12 @@ export function renderElementContent(el: LayoutElement, d: PrintData, ctx: Eleme
     case 'signature':
       return `<div class="rx-sig"><div class="rx-sig-line"></div>${el.label.show ? `<div class="rx-sig-label">${escapeHtml(el.label.text)}</div>` : ''}</div>`
     case 'text':
-      return `<span class="rx-pre">${placeholders(el.text ?? '', d)}</span>`
+      return `<span class="rx-pre">${linesWithDirection(placeholders(el.text ?? '', d))}</span>`
     default: {
       const value = elementValue(el, d, ctx.page, ctx.pages)
       if (!value && HIDE_WHEN_EMPTY.has(el.type)) return ''
-      const cls = MULTILINE.has(el.type) ? 'rx-val rx-pre' : 'rx-val'
-      return `${labelHtml()}<bdi class="${cls}">${escapeHtml(value)}</bdi>`
+      if (MULTILINE.has(el.type)) return `${labelHtml()}<bdi class="rx-val rx-pre">${linesWithDirection(escapeHtml(value))}</bdi>`
+      return `${labelHtml()}<bdi class="rx-val">${escapeHtml(value)}</bdi>`
     }
   }
 }
@@ -323,7 +340,10 @@ export function isOnPage(el: LayoutElement, page: number, pages: number): boolea
 export function renderElement(el: LayoutElement, d: PrintData, ctx: ElementContext): string {
   const content = renderElementContent(el, d, ctx)
   if (!content) return ''
-  return `<div class="rx-el rx-el-${el.type}" dir="${dirAttr(el)}" style="${elementStyle(el)}">${content}</div>`
+  // Advice, lab tests, diagnosis, address and free text that contain Arabic read right-to-left
+  // (only when the element's direction is "Auto"; an explicit LTR/RTL choice in the designer wins).
+  const dir = el.style.direction === 'auto' && (MULTILINE.has(el.type) || el.type === 'text') && hasArabic(content) ? 'rtl' : dirAttr(el)
+  return `<div class="rx-el rx-el-${el.type}" dir="${dir}" style="${elementStyle(el)}">${content}</div>`
 }
 
 // ------------------------------------------------------------------ document
@@ -354,6 +374,8 @@ export const LAYOUT_CSS = `
 .rx-label{opacity:.8;font-weight:inherit}
 .rx-val{unicode-bidi:isolate}
 .rx-pre{white-space:pre-wrap;unicode-bidi:plaintext}
+.rx-pre:has(.rx-line){unicode-bidi:isolate}
+.rx-line{unicode-bidi:isolate}
 .rx-el-text{white-space:pre-wrap}
 .rx-img{display:block;width:100%;height:100%}
 .rx-line{position:absolute}
@@ -368,10 +390,11 @@ export const LAYOUT_CSS = `
 .rx-symbol span{font-size:.62em;margin-left:-.05em;vertical-align:-.25em}
 .rx-med-item{break-inside:avoid}
 .rx-med-line1{text-align:left}
-.rx-numbered .rx-med-line2{padding-left:1.6em}
+.rx-numbered .rx-med-line2[dir=ltr]{padding-left:1.6em}
 .rx-numbered .rx-med-num{display:inline-block;min-width:1.6em}
-.rx-med-line2{unicode-bidi:plaintext;opacity:.92;margin-top:.3mm}
-.rx-med-line2[dir=auto]{text-align:start}
+.rx-med-line2{unicode-bidi:isolate;opacity:.92;margin-top:.3mm}
+.rx-med-line2[dir=rtl]{text-align:right}
+.rx-med-line2[dir=ltr]{text-align:left}
 .rx-sep{opacity:.5}
 .rx-med-table{width:100%;border-collapse:collapse;table-layout:fixed}
 .rx-med-table th,.rx-med-table td{padding:var(--rx-pad,1mm) 1.2mm;vertical-align:top;text-align:start;overflow-wrap:break-word}
