@@ -126,3 +126,13 @@ Choices made where the brief was open, picking the simplest option for a non-tec
 - Import is two-step (preview, then Import). A drug that already exists (same name, any case) keeps its spelling and
   is updated only in the cells filled in the sheet; repeated names in the file: the last row wins.
 - The export includes "times used" for information; re-importing an export changes nothing.
+
+## Dose dropdowns and eye
+- Default dose entry is now **dropdowns**: Amount (→ `dose`), Frequency (→ `frequency`) and, when switched on, Eye
+  (→ new `site` field). Each is an autocomplete that opens with the full list and still accepts typed values. Lists are
+  editable in Settings and are kept when a preset is chosen. "One typed line" mode is still available.
+- In dropdown mode the typed frequency and route boxes are never shown (replaced by the dropdowns). On upgrade, saved
+  settings switch to dropdowns once and untick Strength, Route and Frequency, as the doctor asked.
+- The eye is stored in its own `site` column (migration v3) and printed as its own column/part after the frequency, so
+  it never mixes with route or instructions. Layouts made before layout v2 get the column added once; it is dropped
+  automatically from tables when no medicine has an eye.

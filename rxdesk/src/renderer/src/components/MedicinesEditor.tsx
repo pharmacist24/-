@@ -1,7 +1,7 @@
 import { memo, useEffect, useRef, useState } from 'react'
 import { ActionIcon, Alert, Autocomplete, Badge, Group, Text, TextInput, Tooltip } from '@mantine/core'
-import { IconAlertTriangle, IconArrowDown, IconArrowUp, IconTrash } from '@tabler/icons-react'
-import type { Drug, MedicineItem, RxMedField } from '@shared/types'
+import { IconAlertTriangle, IconArrowDown, IconArrowUp, IconChevronDown, IconTrash } from '@tabler/icons-react'
+import type { Drug, MedicineItem, RxFormSettings, RxMedField } from '@shared/types'
 import { ALL_RX_MED_FIELDS, DRUG_FORMS, DURATION_SUGGESTIONS, EMPTY_ITEM, FREQUENCY_SUGGESTIONS, INSTRUCTION_SUGGESTIONS, ROUTES } from '@shared/defaults'
 import { findAllergyMatches } from '@shared/text'
 import { api } from '../lib/api'
@@ -26,6 +26,23 @@ interface Props {
   fields?: RxMedField[]
   /** Saved dose phrases, offered as suggestions in the dose box. */
   phrases?: string[]
+  /** Dose as dropdowns (amount / frequency / eye) instead of one typed line. */
+  dose?: Pick<RxFormSettings, 'doseMode' | 'doseParts' | 'lists'>
+}
+
+export type DoseConfig = NonNullable<Props['dose']>
+
+/** Which boxes a row shows. In dropdown mode the free-text frequency and route boxes are replaced by dropdowns. */
+function layoutFor(fields: RxMedField[], dose?: DoseConfig) {
+  const dropdowns = dose?.doseMode === 'dropdowns'
+  const show = (f: RxMedField) => fields.includes(f) && !(dropdowns && (f === 'frequency' || f === 'route'))
+  return {
+    dropdowns,
+    show,
+    amountList: dropdowns && dose!.doseParts.amount,
+    freqDropdown: dropdowns && dose!.doseParts.frequency,
+    eyeDropdown: dropdowns && dose!.doseParts.eye
+  }
 }
 
 const SIG_FIELDS: RxMedField[] = ['frequency', 'duration', 'route', 'instructions']
@@ -40,7 +57,7 @@ export function doseLine(d: Pick<Drug, 'dose' | 'frequency' | 'duration' | 'inst
 }
 
 /** Editable list of medicines. Always keeps one empty row at the end for fast typing. */
-export default function MedicinesEditor({ items, onChange, allergies = '', onActiveRow, activeRow, fields = ALL_RX_MED_FIELDS, phrases = [] }: Props) {
+export default function MedicinesEditor({ items, onChange, allergies = '', onActiveRow, activeRow, fields = ALL_RX_MED_FIELDS, phrases = [], dose }: Props) {
   const t = useT()
   const wrapRef = useRef<HTMLDivElement>(null)
   const pendingFocus = useRef<{ row: number; field: Field } | null>(null)
@@ -76,13 +93,16 @@ export default function MedicinesEditor({ items, onChange, allergies = '', onAct
   const pickDrug = (index: number, d: Drug) => {
     const it = latest.current[index]
     const fill = (k: Field, v: string) => (it[k] && k !== 'drugName' ? it[k] : v)
-    // Hidden sig fields go into the dose line; hidden form/strength are still kept (shown under the name).
-    const sig = (k: 'frequency' | 'duration' | 'route' | 'instructions') => (fields.includes(k) ? fill(k, d[k]) : it[k])
+    const lay = layoutFor(fields, dose)
+    // Boxes that are on the screen get the library value; hidden duration/instructions (and frequency without
+    // its dropdown) go into the dose line. Hidden form/strength are still kept (shown under the name).
+    const visible = (k: RxMedField) => (k === 'frequency' ? lay.show(k) || lay.freqDropdown : lay.show(k))
+    const sig = (k: 'frequency' | 'duration' | 'route' | 'instructions') => (visible(k) ? fill(k, d[k]) : it[k])
     update(index, {
       drugName: d.name,
       form: fill('form', d.form),
       strength: fill('strength', d.strength),
-      dose: fill('dose', doseLine(d, fields)),
+      dose: fill('dose', doseLine(d, ALL_RX_MED_FIELDS.filter(visible))),
       frequency: sig('frequency'),
       duration: sig('duration'),
       route: sig('route'),
@@ -143,6 +163,7 @@ export default function MedicinesEditor({ items, onChange, allergies = '', onAct
           onFocusRow={(idx) => onActiveRow?.(idx)}
           fields={fields}
           phrases={phrases}
+          dose={dose}
         />
       ))}
     </div>
@@ -164,9 +185,10 @@ interface RowProps {
   onFocusRow: (i: number) => void
   fields: RxMedField[]
   phrases: string[]
+  dose?: DoseConfig
 }
 
-const Row = memo(function Row({ index, item, isLast, canMoveDown, active, allergies, t, onUpdate, onPick, onMove, onRemove, onFocusRow, fields, phrases }: RowProps) {
+const Row = memo(function Row({ index, item, isLast, canMoveDown, active, allergies, t, onUpdate, onPick, onMove, onRemove, onFocusRow, fields, phrases, dose }: RowProps) {
   const [drugs, setDrugs] = useState<Drug[]>([])
   const query = useRef('')
 
@@ -185,10 +207,13 @@ const Row = memo(function Row({ index, item, isLast, canMoveDown, active, allerg
   }
 
   const matches = item.drugName ? findAllergyMatches(item.drugName, allergies) : []
-  const show = (f: RxMedField) => fields.includes(f)
+  const lay = layoutFor(fields, dose)
+  const show = lay.show
   const line2Fields = SIG_FIELDS.filter(show)
-  const sigVisible = line2Fields.length > 0
-  const line1Cols = ['2.4fr', show('form') && '1fr', show('strength') && '1fr', sigVisible ? '2fr' : '3.2fr'].filter(Boolean).join(' ')
+  const sigVisible = line2Fields.length > 0 || lay.freqDropdown
+  const line1Cols = lay.dropdowns
+    ? ['2.4fr', show('form') && '1fr', show('strength') && '1fr', lay.amountList ? '1.5fr' : '2fr', lay.freqDropdown && '1.6fr', lay.eyeDropdown && '1.3fr'].filter(Boolean).join(' ')
+    : ['2.4fr', show('form') && '1fr', show('strength') && '1fr', sigVisible ? '2fr' : '3.2fr'].filter(Boolean).join(' ')
   // Values that will print but whose box is hidden (e.g. "1 g · Tab").
   const hiddenExtra = [!show('strength') && item.strength, !show('form') && item.form].filter(Boolean).join(' · ')
   const prefixMatch = !!drugs[0] && drugs[0].name.toLowerCase().startsWith(item.drugName.trim().toLowerCase()) && item.drugName.trim().length > 0
@@ -196,7 +221,7 @@ const Row = memo(function Row({ index, item, isLast, canMoveDown, active, allerg
     'data-row': index,
     'data-field': field,
     size: 'sm' as const,
-    value: item[field],
+    value: item[field] ?? '',
     onFocus: () => onFocusRow(index),
     classNames: { label: classes.label }
   })
@@ -212,6 +237,27 @@ const Row = memo(function Row({ index, item, isLast, canMoveDown, active, allerg
       limit={8}
       onChange={(v) => onUpdate(index, { [field]: v })}
       comboboxProps={{ withinPortal: true }}
+    />
+  )
+
+  /** A dropdown that opens with the whole list, filters while typing and still accepts any typed value. */
+  const pickList = (field: Field, label: string, data: string[]) => (
+    <Autocomplete
+      {...common(field)}
+      label={label}
+      dir="auto"
+      data={data}
+      maxDropdownHeight={280}
+      filter={({ options, search }) => {
+        const q = search.trim()
+        if (!q || data.includes(q)) return options
+        return (options as { value: string }[]).filter((o) => o.value.includes(q)) as typeof options
+      }}
+      rightSection={<IconChevronDown size={14} />}
+      rightSectionPointerEvents="none"
+      onChange={(v) => onUpdate(index, { [field]: v })}
+      comboboxProps={{ withinPortal: true }}
+      data-dropdown={field}
     />
   )
 
@@ -260,9 +306,17 @@ const Row = memo(function Row({ index, item, isLast, canMoveDown, active, allerg
           />
           {show('form') && suggest('form', t('rx.form'), DRUG_FORMS, 'ltr')}
           {show('strength') && text('strength', t('rx.strength'), 'ltr')}
-          {suggest('dose', sigVisible ? t('rx.dose') : t('rx.doseLine'), phrases)}
+          {lay.dropdowns ? (
+            <>
+              {lay.amountList ? pickList('dose', t('rx.amount'), dose!.lists.amount) : suggest('dose', t('rx.dose'), phrases)}
+              {lay.freqDropdown && pickList('frequency', t('rx.frequency'), dose!.lists.frequency)}
+              {lay.eyeDropdown && pickList('site', t('rx.eye'), dose!.lists.eye)}
+            </>
+          ) : (
+            suggest('dose', sigVisible ? t('rx.dose') : t('rx.doseLine'), phrases)
+          )}
         </div>
-        {sigVisible && (!isLast || item.drugName) ? (
+        {line2Fields.length > 0 && (!isLast || item.drugName) ? (
           <div className={classes.line2} style={{ gridTemplateColumns: line2Fields.map((f) => (f === 'instructions' ? '2fr' : f === 'frequency' ? '1.6fr' : '1fr')).join(' ') }}>
             {show('frequency') && suggest('frequency', t('rx.frequency'), FREQUENCY_SUGGESTIONS)}
             {show('duration') && suggest('duration', t('rx.duration'), DURATION_SUGGESTIONS)}

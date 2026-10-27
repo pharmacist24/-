@@ -183,14 +183,15 @@ const COLUMN_WIDTH: Record<MedicineColumn, number> = {
   drug: 30,
   dose: 15,
   frequency: 17,
+  site: 12,
   duration: 11,
   route: 9,
   instructions: 20
 }
 
 const COLUMN_LABEL: Record<'ar' | 'en', Record<MedicineColumn, string>> = {
-  en: { number: '#', drug: 'Medicine', dose: 'Dose', frequency: 'Frequency', duration: 'Duration', route: 'Route', instructions: 'Instructions' },
-  ar: { number: '#', drug: 'الدواء', dose: 'الجرعة', frequency: 'عدد المرات', duration: 'المدة', route: 'الطريقة', instructions: 'تعليمات' }
+  en: { number: '#', drug: 'Medicine', dose: 'Dose', frequency: 'Frequency', site: 'Eye', duration: 'Duration', route: 'Route', instructions: 'Instructions' },
+  ar: { number: '#', drug: 'الدواء', dose: 'الجرعة', frequency: 'عدد المرات', site: 'العين', duration: 'المدة', route: 'الطريقة', instructions: 'تعليمات' }
 }
 
 export function columnLabel(m: MedicinesOptions, c: MedicineColumn, lang: 'ar' | 'en'): string {
@@ -209,6 +210,7 @@ function detailParts(it: Item, cols: MedicineColumn[]): string[] {
   const map: Partial<Record<MedicineColumn, string>> = {
     dose: it.dose,
     frequency: it.frequency,
+    site: it.site ?? '',
     duration: it.duration,
     route: it.route,
     instructions: it.instructions

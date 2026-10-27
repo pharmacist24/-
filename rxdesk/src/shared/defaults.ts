@@ -2,7 +2,27 @@ import type { AppSettings, ClinicProfile, MedicineItem, RxFormSettings, RxMedFie
 
 export const ALL_RX_MED_FIELDS: RxMedField[] = ['form', 'strength', 'frequency', 'duration', 'route', 'instructions']
 
-/** Simple screen: drug name + one dose line, diagnosis with treatment suggestions, advice box. */
+export const DEFAULT_DOSE_LISTS: RxFormSettings['lists'] = {
+  amount: ['قطرة واحدة', 'قطرتين', '3 قطرات', 'قرص واحد', 'نصف قرص', 'قرصين', 'كبسولة واحدة', '5 مل', '10 مل', 'دهان طبقة رفيعة', 'مرهم 1 سم'],
+  frequency: [
+    'مرة يومياً',
+    'مرتين يومياً',
+    '3 مرات يومياً',
+    '4 مرات يومياً',
+    '6 مرات يومياً',
+    'كل ساعة',
+    'كل ساعتين',
+    'كل 4 ساعات',
+    'كل 6 ساعات',
+    'كل 8 ساعات',
+    'كل 12 ساعة',
+    'قبل النوم',
+    'عند اللزوم'
+  ],
+  eye: ['العين اليمنى', 'العين اليسرى', 'العينين']
+}
+
+/** Simple screen: drug name + amount/frequency dropdowns, diagnosis with treatment suggestions, advice box. */
 export const SIMPLE_RX_FORM: RxFormSettings = {
   medFields: [],
   showDiagnosis: true,
@@ -10,7 +30,16 @@ export const SIMPLE_RX_FORM: RxFormSettings = {
   showLabTests: false,
   showNextVisit: false,
   showSidePanel: false,
-  showSmartPanel: true
+  showSmartPanel: true,
+  doseMode: 'dropdowns',
+  doseParts: { amount: true, frequency: true, eye: false },
+  lists: DEFAULT_DOSE_LISTS
+}
+
+/** Eye clinic: drug name + amount, frequency and eye dropdowns. */
+export const EYE_RX_FORM: RxFormSettings = {
+  ...SIMPLE_RX_FORM,
+  doseParts: { amount: true, frequency: true, eye: true }
 }
 
 /** Detailed screen: every field and section. */
@@ -21,7 +50,10 @@ export const DETAILED_RX_FORM: RxFormSettings = {
   showLabTests: true,
   showNextVisit: true,
   showSidePanel: true,
-  showSmartPanel: true
+  showSmartPanel: true,
+  doseMode: 'line',
+  doseParts: { amount: true, frequency: true, eye: false },
+  lists: DEFAULT_DOSE_LISTS
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -56,7 +88,8 @@ export const EMPTY_ITEM: MedicineItem = {
   frequency: '',
   duration: '',
   route: '',
-  instructions: ''
+  instructions: '',
+  site: ''
 }
 
 export const DRUG_FORMS = [

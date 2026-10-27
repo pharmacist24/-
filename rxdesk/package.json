@@ -18,7 +18,7 @@
     "test": "cross-env ELECTRON_RUN_AS_NODE=1 electron node_modules/vitest/vitest.mjs run",
     "postinstall": "electron-builder install-app-deps",
     "dist": "npm run build && electron-builder --win nsis --x64 --publish never",
-    "e2e": "npm run build && node scripts/e2e.mjs m2 && node scripts/e2e.mjs m3 && node scripts/e2e.mjs m4 && node scripts/e2e.mjs m5 && node scripts/e2e.mjs m6 && node scripts/e2e.mjs m7 && node scripts/e2e.mjs m8 && node scripts/e2e.mjs m9 && node scripts/e2e.mjs m10"
+    "e2e": "npm run build && node scripts/e2e.mjs m2 && node scripts/e2e.mjs m3 && node scripts/e2e.mjs m4 && node scripts/e2e.mjs m5 && node scripts/e2e.mjs m6 && node scripts/e2e.mjs m7 && node scripts/e2e.mjs m8 && node scripts/e2e.mjs m9 && node scripts/e2e.mjs m10 && node scripts/e2e.mjs m11"
   },
   "dependencies": {
     "better-sqlite3": "12.11.1",

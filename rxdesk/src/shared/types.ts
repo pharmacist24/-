@@ -36,6 +36,11 @@ export interface RxFormSettings {
   showSidePanel: boolean
   /** Treatment suggestions under the diagnosis. */
   showSmartPanel: boolean
+  /** 'line' = one typed dose box; 'dropdowns' = amount / frequency / eye dropdowns. */
+  doseMode: 'line' | 'dropdowns'
+  doseParts: { amount: boolean; frequency: boolean; eye: boolean }
+  /** Choices offered in each dropdown (editable in Settings). */
+  lists: { amount: string[]; frequency: string[]; eye: string[] }
 }
 
 export interface AppSettings {
@@ -84,6 +89,8 @@ export interface MedicineItem {
   duration: string
   route: string
   instructions: string
+  /** Where to apply it, e.g. "العين اليمنى" (eye dropdown). Optional for older data. */
+  site?: string
 }
 
 export interface PatientSnapshot {

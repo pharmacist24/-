@@ -465,6 +465,7 @@ export default function PrescriptionScreen({ rxId: initialRxId, patientId, repea
                 onActiveRow={setActiveRow}
                 fields={rf.medFields}
                 phrases={phrases.map((p) => p.text)}
+                dose={rf}
               />
             </div>
 

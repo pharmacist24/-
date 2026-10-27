@@ -28,7 +28,7 @@ export const DEFAULT_STYLE: TextStyle = {
 
 export const DEFAULT_MEDICINES: MedicinesOptions = {
   style: 'list',
-  columns: ['number', 'drug', 'dose', 'frequency', 'duration', 'instructions'],
+  columns: ['number', 'drug', 'dose', 'frequency', 'site', 'duration', 'instructions'],
   showHeader: true,
   headerLabels: {},
   rowGapMm: 2.5,
@@ -192,7 +192,7 @@ export function sampleA4Layout(): Layout {
       medicines: {
         ...DEFAULT_MEDICINES,
         style: 'table',
-        columns: ['number', 'drug', 'dose', 'frequency', 'duration', 'instructions'],
+        columns: ['number', 'drug', 'dose', 'frequency', 'site', 'duration', 'instructions'],
         rowGapMm: 1.2,
         detailFontSizePt: 10
       }
@@ -285,6 +285,11 @@ export function normalizeLayout(input: any): Layout {
         ALL_MEDICINE_COLUMNS.includes(c)
       )
       if (!m.columns.includes('drug')) m.columns.splice(m.columns.includes('number') ? 1 : 0, 0, 'drug')
+      // Layouts made before v2 did not know the eye/site column: add it once, after the frequency.
+      if (!(Number(src.version) >= 2) && !m.columns.includes('site')) {
+        const after = ['frequency', 'dose', 'drug'].map((c) => m.columns.indexOf(c)).find((i: number) => i >= 0) ?? 0
+        m.columns.splice(after + 1, 0, 'site')
+      }
       m.style = m.style === 'table' ? 'table' : 'list'
       m.rowGapMm = num(m.rowGapMm, 2.5, 0, 30)
       m.detailFontSizePt = num(m.detailFontSizePt, 10, 4, 72)

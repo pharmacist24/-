@@ -15,6 +15,7 @@ import {
   Switch,
   Table,
   Tabs,
+  TagsInput,
   Text,
   Title
 } from '@mantine/core'
@@ -33,7 +34,7 @@ import {
   IconRestore
 } from '@tabler/icons-react'
 import type { AppInfo, BackupInfo, ClinicProfile, LayoutRecord, MedicineItem, PrinterInfo, RxFormSettings, RxMedField } from '@shared/types'
-import { ALL_RX_MED_FIELDS, DETAILED_RX_FORM, SIMPLE_RX_FORM } from '@shared/defaults'
+import { ALL_RX_MED_FIELDS, DEFAULT_DOSE_LISTS, DETAILED_RX_FORM, EYE_RX_FORM, SIMPLE_RX_FORM } from '@shared/defaults'
 import type { StringKey } from '../i18n'
 import MedicinesEditor, { doseLine } from '../components/MedicinesEditor'
 import { formatDate } from '@shared/text'
@@ -109,21 +110,29 @@ function RxFormTab() {
   const { t, settings, updateSettings } = useApp()
   const rf = settings.rxForm
   const set = (patch: Partial<RxFormSettings>) => updateSettings({ rxForm: { ...rf, ...patch } }).catch((e) => notifyError(e, t))
-  const same = (a: RxFormSettings, b: RxFormSettings) => JSON.stringify(a) === JSON.stringify(b)
-  const sample = (fields: RxMedField[]): MedicineItem[] => [
-    {
-      drugName: 'Augmentin',
-      form: 'Tab',
-      strength: '1 g',
-      dose: doseLine(SAMPLE_DRUG, fields),
-      frequency: fields.includes('frequency') ? SAMPLE_DRUG.frequency : '',
-      duration: fields.includes('duration') ? SAMPLE_DRUG.duration : '',
-      route: fields.includes('route') ? 'Oral' : '',
-      instructions: fields.includes('instructions') ? SAMPLE_DRUG.instructions : ''
-    }
-  ]
-  const [preview, setPreview] = useState<MedicineItem[]>(() => sample(rf.medFields))
-  useEffect(() => setPreview(sample(rf.medFields)), [rf.medFields.join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Presets never touch the doctor's own dropdown lists.
+  const same = (a: RxFormSettings, b: RxFormSettings) => JSON.stringify({ ...a, lists: null }) === JSON.stringify({ ...b, lists: null })
+  const dropdowns = rf.doseMode === 'dropdowns'
+  const sample = (): MedicineItem[] => {
+    const visible = dropdowns ? rf.medFields.filter((f) => f !== 'frequency' && f !== 'route') : rf.medFields
+    const freqShown = dropdowns ? rf.doseParts.frequency : visible.includes('frequency')
+    return [
+      {
+        drugName: 'Tobradex',
+        form: 'Eye drops',
+        strength: '0.3%',
+        dose: dropdowns && rf.doseParts.amount ? rf.lists.amount[0] ?? '' : doseLine(SAMPLE_DRUG, freqShown ? [...visible, 'frequency'] : visible),
+        frequency: freqShown ? (dropdowns ? rf.lists.frequency[3] ?? rf.lists.frequency[0] ?? '' : SAMPLE_DRUG.frequency) : '',
+        duration: visible.includes('duration') ? SAMPLE_DRUG.duration : '',
+        route: visible.includes('route') ? 'Eye' : '',
+        instructions: visible.includes('instructions') ? SAMPLE_DRUG.instructions : '',
+        site: dropdowns && rf.doseParts.eye ? rf.lists.eye[0] ?? '' : ''
+      }
+    ]
+  }
+  const key = JSON.stringify(rf)
+  const [preview, setPreview] = useState<MedicineItem[]>(sample)
+  useEffect(() => setPreview(sample()), [key]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const preset = (value: RxFormSettings, title: StringKey, hint: StringKey, id: string) => (
     <Paper
@@ -131,7 +140,7 @@ function RxFormTab() {
       p="md"
       radius="md"
       style={{ cursor: 'pointer', borderColor: same(rf, value) ? 'var(--mantine-color-teal-6)' : undefined, background: same(rf, value) ? 'var(--mantine-color-teal-0)' : undefined }}
-      onClick={() => set(value)}
+      onClick={() => set({ ...value, lists: rf.lists })}
       data-preset={id}
     >
       <Text fw={700}>{t(title)}</Text>
@@ -148,21 +157,86 @@ function RxFormTab() {
     ['showNextVisit', 'st.rxShowNextVisit'],
     ['showSidePanel', 'st.rxShowSidePanel']
   ]
+  const parts: [keyof RxFormSettings['doseParts'], StringKey][] = [
+    ['amount', 'st.rxPartAmount'],
+    ['frequency', 'st.rxPartFrequency'],
+    ['eye', 'st.rxPartEye']
+  ]
+  const listLabel: Record<keyof RxFormSettings['lists'], StringKey> = { amount: 'st.rxListAmount', frequency: 'st.rxListFrequency', eye: 'st.rxListEye' }
+  // In dropdown mode the typed frequency and route boxes are replaced by the dropdowns.
+  const fieldChoices = ALL_RX_MED_FIELDS.filter((f) => !(dropdowns && (f === 'frequency' || f === 'route')))
   return (
     <Stack gap="lg">
       <Text c="dimmed">{t('st.rxFormHint')}</Text>
-      <SimpleGrid cols={2}>
+      <SimpleGrid cols={3}>
         {preset(SIMPLE_RX_FORM, 'st.rxSimple', 'st.rxSimpleHint', 'simple')}
+        {preset(EYE_RX_FORM, 'st.rxEye', 'st.rxEyeHint', 'eye')}
         {preset(DETAILED_RX_FORM, 'st.rxDetailed', 'st.rxDetailedHint', 'detailed')}
       </SimpleGrid>
+
+      <div className="rx-card" style={{ background: '#fafbfc' }}>
+        <Group justify="space-between" mb="sm">
+          <Text fw={600}>{t('st.rxDose')}</Text>
+          <SegmentedControl
+            size="sm"
+            value={rf.doseMode}
+            onChange={(v) => set({ doseMode: v as RxFormSettings['doseMode'] })}
+            data={[
+              { value: 'dropdowns', label: t('st.rxDoseDropdowns') },
+              { value: 'line', label: t('st.rxDoseLine') }
+            ]}
+            data-dose-mode
+          />
+        </Group>
+        {dropdowns && (
+          <Stack gap="sm">
+            <Group gap="xl">
+              {parts.map(([k, label]) => (
+                <Switch
+                  key={k}
+                  label={t(label)}
+                  checked={rf.doseParts[k]}
+                  onChange={(e) => set({ doseParts: { ...rf.doseParts, [k]: e.currentTarget.checked } })}
+                  data-part-toggle={k}
+                />
+              ))}
+            </Group>
+            <Text fw={600} fz="sm" mt="xs">
+              {t('st.rxLists')}
+            </Text>
+            <Text fz="xs" c="dimmed">
+              {t('st.rxListsHint')}
+            </Text>
+            {(Object.keys(listLabel) as (keyof RxFormSettings['lists'])[])
+              .filter((k) => rf.doseParts[k])
+              .map((k) => (
+                <div key={k} data-list={k}>
+                  <TagsInput
+                    label={t(listLabel[k])}
+                    value={rf.lists[k]}
+                    onChange={(v) => set({ lists: { ...rf.lists, [k]: v } })}
+                    splitChars={[',', '،']}
+                    clearable
+                    dir="rtl"
+                  />
+                </div>
+              ))}
+            <Group>
+              <Button variant="subtle" size="xs" leftSection={<IconRestore size={14} />} onClick={() => set({ lists: DEFAULT_DOSE_LISTS })}>
+                {t('st.rxListReset')}
+              </Button>
+            </Group>
+          </Stack>
+        )}
+      </div>
+
       <div>
         <Text fw={600} mb={6}>
           {t('st.rxMedFields')}
         </Text>
         <SimpleGrid cols={3} spacing="xs">
           <Checkbox label={t('rx.drug')} checked disabled />
-          <Checkbox label={t('rx.dose')} checked disabled />
-          {ALL_RX_MED_FIELDS.map((f) => (
+          {fieldChoices.map((f) => (
             <Checkbox
               key={f}
               label={t(`rx.${f}` as StringKey)}
@@ -187,14 +261,12 @@ function RxFormTab() {
         <Text fw={600} mb={6}>
           {t('st.rxPreview')}
         </Text>
-        <div style={{ pointerEvents: 'none' }} data-enter-skip>
-          <MedicinesEditor items={preview} onChange={setPreview} fields={rf.medFields} />
+        <div style={{ pointerEvents: 'none' }} data-enter-skip id="rxform-preview">
+          <MedicinesEditor items={preview} onChange={setPreview} fields={rf.medFields} dose={rf} />
         </div>
-        {rf.medFields.length < ALL_RX_MED_FIELDS.length && (
-          <Text fz="sm" c="dimmed" mt={4}>
-            {t('st.rxHiddenNote')}
-          </Text>
-        )}
+        <Text fz="sm" c="dimmed" mt={4}>
+          {t('st.rxHiddenNote')}
+        </Text>
       </div>
     </Stack>
   )

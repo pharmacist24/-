@@ -21,7 +21,7 @@ import type {
   ReportSummary
 } from '@shared/types'
 import type { Layout } from '@shared/layout/types'
-import { ALL_RX_MED_FIELDS, DEFAULT_SETTINGS, EMPTY_PROFILE } from '@shared/defaults'
+import { ALL_RX_MED_FIELDS, DEFAULT_DOSE_LISTS, DEFAULT_SETTINGS, EMPTY_PROFILE } from '@shared/defaults'
 import { digitsOnly, formatAge, normalizeForSearch, todayIso } from '@shared/text'
 import { normalizeLayout } from '@shared/layout/defaults'
 import { conditionSearchText, seedBuiltinConditions } from './migrations'
@@ -79,7 +79,8 @@ function cleanItem(i: Partial<MedicineItem>): MedicineItem {
     frequency: s(i.frequency),
     duration: s(i.duration),
     route: s(i.route),
-    instructions: s(i.instructions)
+    instructions: s(i.instructions),
+    site: s(i.site)
   }
 }
 
@@ -92,8 +93,24 @@ function cleanRxForm(f: AppSettings['rxForm']): AppSettings['rxForm'] {
     showLabTests: !!f.showLabTests,
     showNextVisit: !!f.showNextVisit,
     showSidePanel: !!f.showSidePanel,
-    showSmartPanel: !!f.showSmartPanel
+    showSmartPanel: !!f.showSmartPanel,
+    doseMode: f.doseMode === 'line' ? 'line' : 'dropdowns',
+    doseParts: {
+      amount: f.doseParts?.amount !== false,
+      frequency: f.doseParts?.frequency !== false,
+      eye: !!f.doseParts?.eye
+    },
+    lists: {
+      amount: cleanList(f.lists?.amount, DEFAULT_DOSE_LISTS.amount),
+      frequency: cleanList(f.lists?.frequency, DEFAULT_DOSE_LISTS.frequency),
+      eye: cleanList(f.lists?.eye, DEFAULT_DOSE_LISTS.eye)
+    }
   }
+}
+
+function cleanList(v: unknown, fallback: string[]): string[] {
+  if (!Array.isArray(v)) return [...fallback]
+  return [...new Set(v.map((x) => String(x ?? '').trim()).filter(Boolean))].slice(0, 100)
 }
 
 function safeJsonArray(v: string): any[] {
@@ -137,6 +154,12 @@ export class Repo {
     if (s.rxForm && (s.rxForm as Partial<AppSettings['rxForm']>).showSmartPanel === undefined) {
       s.rxForm = { ...s.rxForm, showDiagnosis: true, showSmartPanel: true }
     }
+    // Settings saved before the dose dropdowns existed: switch to dropdowns and drop the strength,
+    // free-text frequency and route boxes (the doctor asked for a simpler row).
+    if (s.rxForm && (s.rxForm as Partial<AppSettings['rxForm']>).doseMode === undefined) {
+      const fields = (s.rxForm.medFields ?? []).filter((f) => f !== 'strength' && f !== 'route' && f !== 'frequency')
+      s.rxForm = { ...s.rxForm, medFields: fields, doseMode: 'dropdowns' }
+    }
     return {
       ...DEFAULT_SETTINGS,
       ...s,
@@ -151,7 +174,12 @@ export class Repo {
       ...current,
       ...patch,
       autoBackup: { ...current.autoBackup, ...(patch.autoBackup ?? {}) },
-      rxForm: cleanRxForm({ ...current.rxForm, ...(patch.rxForm ?? {}) })
+      rxForm: cleanRxForm({
+        ...current.rxForm,
+        ...(patch.rxForm ?? {}),
+        doseParts: { ...current.rxForm.doseParts, ...(patch.rxForm?.doseParts ?? {}) },
+        lists: { ...current.rxForm.lists, ...(patch.rxForm?.lists ?? {}) }
+      })
     }
     next.copies = Math.min(20, Math.max(1, Math.round(Number(next.copies) || 1)))
     next.autoBackup.keep = Math.min(365, Math.max(1, Math.round(Number(next.autoBackup.keep) || 14)))
@@ -475,11 +503,11 @@ export class Repo {
         this.learnDrugs(items)
       }
       const ins = this.db.prepare(
-        `INSERT INTO prescription_items(prescription_id, position, drug_name, form, strength, dose, frequency, duration, route, instructions)
-         VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO prescription_items(prescription_id, position, drug_name, form, strength, dose, frequency, duration, route, instructions, site)
+         VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       items.forEach((it, i) =>
-        ins.run(id, i, it.drugName, it.form, it.strength, it.dose, it.frequency, it.duration, it.route, it.instructions)
+        ins.run(id, i, it.drugName, it.form, it.strength, it.dose, it.frequency, it.duration, it.route, it.instructions, it.site ?? '')
       )
       if (input.id) {
         // Edited prescription: make sure any newly typed drug is learned too.
@@ -503,7 +531,8 @@ export class Repo {
       frequency: i.frequency,
       duration: i.duration,
       route: i.route,
-      instructions: i.instructions
+      instructions: i.instructions,
+      site: i.site ?? ''
     }))
     let patient: PatientSnapshot = { name: '', ageText: '', gender: '', weight: '' }
     try {
@@ -796,7 +825,7 @@ export class Repo {
       .prepare(
         `SELECT r.id AS prescription_id, r.date, p.name AS patient_name, p.phone, r.diagnosis,
            i.position + 1 AS line, i.drug_name, i.form, i.strength, i.dose, i.frequency, i.duration, i.route,
-           i.instructions, r.notes, r.lab_tests, r.next_visit
+           i.instructions, i.site, r.notes, r.lab_tests, r.next_visit
          FROM prescriptions r JOIN patients p ON p.id = r.patient_id
          LEFT JOIN prescription_items i ON i.prescription_id = r.id
          ORDER BY r.date, r.id, i.position`

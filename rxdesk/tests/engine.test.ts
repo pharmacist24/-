@@ -110,7 +110,8 @@ describe('document rendering', () => {
     const el = sampleA4Layout().elements.find((e) => e.type === 'medicines')!
     const html = renderElementContent(el, data, { page: 1, pages: 1, medIndexes: [0, 1] })
     const widths = [...html.matchAll(/<col style="width:([\d.]+)%">/g)].map((m) => Number(m[1]))
-    expect(widths.length).toBe(el.medicines!.columns.length)
+    // the eye column is empty in the sample, so it is left out
+    expect(widths.length).toBe(el.medicines!.columns.filter((c) => c !== 'site').length)
     expect(Math.round(widths.reduce((a, b) => a + b, 0))).toBe(100)
     expect(html).toContain('<th dir="auto">الدواء</th>')
   })
@@ -127,6 +128,13 @@ describe('document rendering', () => {
     const empty = { ...data, rx: { ...data.rx, labTests: '', diagnosis: '' }, patient: { ...data.patient, weight: '' } }
     expect(renderElementContent(createElement('labTests'), empty, { page: 1, pages: 1, medIndexes: [] })).toBe('')
     expect(renderElementContent(createElement('patientWeight'), empty, { page: 1, pages: 1, medIndexes: [] })).toContain('الوزن')
+  })
+
+  it('prints the eye after the frequency in list style', () => {
+    const el = sampleA5Layout().elements.find((e) => e.type === 'medicines')!
+    const eye = { ...data, rx: { ...data.rx, items: [{ drugName: 'Tobradex', form: '', strength: '', dose: 'قطرتين', frequency: '4 مرات يومياً', duration: '', route: '', instructions: '', site: 'العين اليمنى' }] } }
+    const html = renderElementContent(el, eye, { page: 1, pages: 1, medIndexes: [0] })
+    expect(html).toContain('<bdi>قطرتين</bdi> <span class="rx-sep">—</span> <bdi>4 مرات يومياً</bdi> <span class="rx-sep">—</span> <bdi>العين اليمنى</bdi>')
   })
 
   it('free text placeholders', () => {
@@ -169,7 +177,15 @@ describe('layout normalisation', () => {
     expect(l.elements[0].x).toBe(12)
     expect(l.elements[0].style.fontFamily).toBe('Cairo')
     expect(l.elements[0].style.fontSizePt).toBe(96)
-    expect(l.elements[1].medicines!.columns).toEqual(['drug', 'dose'])
+    expect(l.elements[1].medicines!.columns).toEqual(['drug', 'dose', 'site']) // pre-v2 layout gains the eye column
+  })
+
+  it('a current (v2) layout keeps its chosen columns', () => {
+    const l = sampleA5Layout()
+    const med = l.elements.find((e) => e.type === 'medicines')!
+    med.medicines!.columns = ['number', 'drug', 'dose']
+    const again = normalizeLayout(JSON.parse(JSON.stringify(l)))
+    expect(again.elements.find((e) => e.type === 'medicines')!.medicines!.columns).toEqual(['number', 'drug', 'dose'])
   })
 
   it('sample layouts survive a JSON round trip unchanged', () => {

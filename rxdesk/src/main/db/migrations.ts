@@ -146,6 +146,13 @@ export const migrations: Migration[] = [
       `)
       seedBuiltinConditions(db)
     }
+  },
+  {
+    version: 3,
+    name: 'medicine site (eye)',
+    up: (db) => {
+      db.exec(`ALTER TABLE prescription_items ADD COLUMN site TEXT NOT NULL DEFAULT ''`)
+    }
   }
 ]
 

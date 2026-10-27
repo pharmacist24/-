@@ -1,7 +1,8 @@
 // Layout model shared by the Print Format Designer and the print renderer.
 // All positions and sizes are in millimetres; font sizes are in points.
 
-export const LAYOUT_VERSION = 1
+// v2: medicines can print the eye/site column.
+export const LAYOUT_VERSION = 2
 
 export type PaperPreset = 'A4' | 'A5' | 'Letter' | 'custom'
 
@@ -62,6 +63,7 @@ export type MedicineColumn =
   | 'drug'
   | 'dose'
   | 'frequency'
+  | 'site'
   | 'duration'
   | 'route'
   | 'instructions'
@@ -71,6 +73,7 @@ export const ALL_MEDICINE_COLUMNS: MedicineColumn[] = [
   'drug',
   'dose',
   'frequency',
+  'site',
   'duration',
   'route',
   'instructions'
@@ -159,6 +162,7 @@ export interface PrintData {
       duration: string
       route: string
       instructions: string
+      site?: string
     }[]
   }
 }

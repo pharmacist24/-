@@ -38,6 +38,12 @@
 - إذا كان المريض لديه حساسية من دواء في الخيار يظهر تحذير أحمر. للأطفال تظهر خيارات الأطفال أولاً (الجرعات لكل كجم — احسبها حسب الوزن).
 - هذه اقتراحات فقط، والطبيب يراجع كل دواء وجرعة. يمكنك تعديل القائمة من **الأدوية والقوالب ← التشخيصات** (تعديل، إضافة تشخيص خاص بك، إخفاء، أو استعادة القائمة الأصلية).
 
+### الجرعة بالقوائم المنسدلة (الكمية · عدد المرات · العين)
+- كل دواء في الروشتة له: **اسم الدواء**، ثم قائمة **الكمية** (قطرة واحدة، قطرتين، قرص…)، وقائمة **عدد المرات** (مرة، مرتين، 4 مرات يومياً، كل ساعتين…).
+- لإضافة قائمة **العين** (العين اليمنى / العين اليسرى / العينين): **الإعدادات ← شاشة الروشتة ← الجرعة** وفعّل "العين"، أو اختر **عيادة عيون**.
+- من نفس المكان يمكنك إضافة أو حذف اختيارات أي قائمة (مثل "كل 3 ساعات"). ويمكنك دائماً كتابة قيمة غير موجودة في القائمة.
+- تُطبع بهذا الشكل تحت اسم الدواء: «قطرة واحدة — 4 مرات يومياً — العين اليمنى».
+
 ### إضافة الأدوية من ملف إكسل
 1. من **الأدوية والقوالب ← مكتبة الأدوية** اضغط **إكسل ← تحميل نموذج فارغ**.
 2. اكتب في كل صف: اسم الدواء، الشكل، التركيز، الجرعة، عدد المرات، المدة، الطريقة، التعليمات (اسم الدواء فقط مطلوب). يمكن أن تكون العناوين بالعربي أو الإنجليزي وبأي ترتيب.
@@ -138,6 +144,15 @@ RxDesk works completely offline. No data ever leaves the computer.
   first (doses are per kg — calculate them for the patient's weight).
 - These are suggestions only; the doctor reviews every drug and dose. Edit the list in **Drugs & templates →
   Diagnoses** (edit, add your own, hide, or restore the built-in list).
+
+### Dose dropdowns (amount · frequency · eye)
+- Each medicine has the **drug name**, an **Amount** dropdown (قطرة واحدة, قطرتين, tablet…) and a **Frequency** dropdown
+  (once, twice, 4 times daily, every 2 hours…).
+- To add the **Eye** dropdown (right eye / left eye / both eyes): **Settings → Prescription screen → Dose**, switch on
+  "Eye", or pick the **Eye clinic** preset.
+- In the same place you can add or remove choices in any list (e.g. "كل 3 ساعات"). You can always type a value that is
+  not in the list.
+- It prints under the drug name as «قطرة واحدة — 4 مرات يومياً — العين اليمنى».
 
 ### Adding drugs from an Excel sheet
 1. In **Drugs & templates → Drug library** click **Excel → Download empty template**.

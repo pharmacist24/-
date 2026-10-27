@@ -71,5 +71,8 @@ export default async function ({ page, app, shot, check, sleep }) {
   await sleep(500)
   await page.keyboard.press('Enter')
   await sleep(300)
-  check((await page.inputValue('[data-row="0"][data-field="dose"]')).startsWith('1 tablet · once daily · 3 days'), 'imported drug autocompletes with its details')
+  check(
+    (await page.inputValue('[data-row="0"][data-field="dose"]')).startsWith('1 tablet') && (await page.inputValue('[data-row="0"][data-field="frequency"]')) === 'once daily',
+    'imported drug autocompletes with its details (amount + frequency)'
+  )
 }

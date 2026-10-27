@@ -42,6 +42,21 @@ describe('migrations', () => {
     repo = again.repo
   })
 
+  it('upgrades a v2 database: medicines get an empty eye field', () => {
+    const file = path.join(dir, 'v2.db')
+    const db = new Database(file)
+    migrations.slice(0, 2).forEach((m) => m.up(db))
+    db.pragma('user_version = 2')
+    db.prepare("INSERT INTO patients(name) VALUES('P')").run()
+    db.prepare("INSERT INTO prescriptions(patient_id, date) VALUES(1, '2026-01-01')").run()
+    db.prepare("INSERT INTO prescription_items(prescription_id, position, drug_name) VALUES(1, 0, 'Old drug')").run()
+    db.close()
+    const res = openDatabase(file)
+    expect(res.applied).toEqual([3])
+    expect(res.repo.getPrescription(1)!.items[0]).toMatchObject({ drugName: 'Old drug', site: '' })
+    res.repo.db.close()
+  })
+
   it('refuses a database from a newer app version', () => {
     const db = new Database(':memory:')
     db.pragma(`user_version = ${LATEST_VERSION + 5}`)
@@ -145,6 +160,36 @@ describe('prescriptions', () => {
 
   it('requires an existing patient', () => {
     expect(() => repo.savePrescription({ patientId: 999, date: '', diagnosis: '', notes: '', nextVisit: '', labTests: '', items: [] })).toThrow(/patient/)
+  })
+})
+
+describe('dose dropdowns & eye', () => {
+  it('saves and loads the eye (site) of each medicine', () => {
+    const p = repo.savePatient({ name: 'Eye patient' } as any)
+    const rx = repo.savePrescription({
+      patientId: p.id, date: '2026-10-27', diagnosis: '', notes: '', nextVisit: '', labTests: '',
+      items: [{ drugName: 'Tobradex', form: '', strength: '', dose: 'قطرتين', frequency: '4 مرات يومياً', duration: '', route: '', instructions: '', site: 'العين اليمنى' }]
+    })
+    expect(repo.getPrescription(rx.id)!.items[0].site).toBe('العين اليمنى')
+    expect(repo.exportPrescriptionRows()[0].site).toBe('العين اليمنى')
+  })
+
+  it('upgrades old settings to dropdowns and removes strength / route / typed frequency boxes', () => {
+    repo.db.prepare("INSERT OR REPLACE INTO settings(key, value) VALUES('app', ?)").run(
+      JSON.stringify({ setupCompleted: true, rxForm: { medFields: ['strength', 'route', 'frequency', 'duration'], showDiagnosis: true, showSmartPanel: true } })
+    )
+    const s = repo.getSettings()
+    expect(s.rxForm.doseMode).toBe('dropdowns')
+    expect(s.rxForm.medFields).toEqual(['duration'])
+    expect(s.rxForm.doseParts).toEqual({ amount: true, frequency: true, eye: false })
+    expect(s.rxForm.lists.eye).toEqual(['العين اليمنى', 'العين اليسرى', 'العينين'])
+  })
+
+  it('merges partial dose settings and cleans lists', () => {
+    const s = repo.updateSettings({ rxForm: { doseParts: { eye: true }, lists: { frequency: [' كل ساعة ', 'كل ساعة', '', 'قبل النوم'] } } as any })
+    expect(s.rxForm.doseParts).toEqual({ amount: true, frequency: true, eye: true })
+    expect(s.rxForm.lists.frequency).toEqual(['كل ساعة', 'قبل النوم'])
+    expect(s.rxForm.lists.amount.length).toBeGreaterThan(5)
   })
 })
 

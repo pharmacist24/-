@@ -517,6 +517,23 @@ export const en = {
   'xl.nothing': "Nothing to import: every drug in the file is already in your library.",
   'xl.showing': "Showing the first {n} rows",
   'err.BAD_FILE': "This file could not be read. Save it as an Excel workbook (.xlsx) or CSV and try again.",
+  'col.site': "Eye",
+  'rx.amount': "Amount",
+  'rx.eye': "Eye",
+  'st.rxEye': "Eye clinic",
+  'st.rxEyeHint': "Drug name + amount, frequency and eye (right / left / both) dropdowns.",
+  'st.rxDose': "Dose",
+  'st.rxDoseLine': "One typed line",
+  'st.rxDoseDropdowns': "Dropdowns",
+  'st.rxPartAmount': "Amount (e.g. قطرة واحدة / قطرتين)",
+  'st.rxPartFrequency': "Frequency (e.g. مرتين يومياً)",
+  'st.rxPartEye': "Eye (right / left / both)",
+  'st.rxLists': "Dropdown choices",
+  'st.rxListsHint': "Type a choice and press Enter to add it; click × to remove. In a prescription you can also type a value that is not in the list.",
+  'st.rxListAmount': "Amount choices",
+  'st.rxListFrequency': "Frequency choices",
+  'st.rxListEye': "Eye choices",
+  'st.rxListReset': "Reset lists",
   'st.profileSaved': 'Clinic information saved'
 }
 

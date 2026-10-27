@@ -91,7 +91,7 @@ describe('upgrade from version 1', () => {
     db.close()
     let backedUpFrom = 0
     const res = openDatabase(file, (v) => (backedUpFrom = v))
-    expect({ prev: res.previousVersion, applied: res.applied, backedUpFrom }).toEqual({ prev: 1, applied: [2], backedUpFrom: 1 })
+    expect({ prev: res.previousVersion, applied: res.applied, backedUpFrom }).toEqual({ prev: 1, applied: [2, 3], backedUpFrom: 1 })
     expect(res.repo.allPatients().map((p) => p.name)).toEqual(['Old patient'])
     expect(res.repo.listConditions().length).toBe(BUILTIN_CONDITIONS.length)
     // settings saved before the feature get the diagnosis box + panel turned on

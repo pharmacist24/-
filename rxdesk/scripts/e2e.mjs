@@ -103,6 +103,14 @@ if (['m3', 'm7'].includes(stage)) {
   await sleep(300)
 }
 
+// The one-typed-line dose stage switches to that mode first.
+if (stage === 'm8') {
+  await page.click('[data-nav="settings"]')
+  await page.click('[data-tab="rxform"]')
+  await page.click('[data-dose-mode] >> text=سطر واحد يُكتب')
+  await sleep(300)
+}
+
 if (stage !== 'm2') {
   const mod = await import(`./e2e-${stage}.mjs`)
   await mod.default({ page, app, shot, check, sleep, dataDir })
