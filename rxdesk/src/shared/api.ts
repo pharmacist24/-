@@ -19,7 +19,8 @@ import type {
   PrescriptionListItem,
   PrinterInfo,
   PrintOptions,
-  ReportSummary
+  ReportSummary,
+  SyncStatus
 } from './types'
 import type { Layout, PaperPreset } from './layout/types'
 
@@ -140,6 +141,12 @@ export interface Api {
   reports: {
     summary(): Promise<ReportSummary>
   }
+  sync: {
+    status(): Promise<SyncStatus>
+    signIn(email: string, password: string): Promise<SyncStatus>
+    signOut(): Promise<SyncStatus>
+    now(): Promise<SyncStatus>
+  }
 }
 
 export type ApiNamespace = keyof Api
@@ -149,5 +156,5 @@ export const UNLOCKED_METHODS = new Set(['app.info', 'app.logError', 'auth.unloc
 
 export interface PreloadBridge {
   invoke(method: string, args: unknown[]): Promise<unknown>
-  on(channel: 'db-replaced' | 'backup-failed' | 'locked', listener: (payload: unknown) => void): () => void
+  on(channel: 'db-replaced' | 'backup-failed' | 'locked' | 'sync-status', listener: (payload: unknown) => void): () => void
 }

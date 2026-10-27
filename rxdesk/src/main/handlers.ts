@@ -23,6 +23,7 @@ async function readDrugs(file: string) {
 import { formatAge, genderText, todayIso } from '@shared/text'
 import { log, getLogFile } from './logger'
 import { state, replaceDatabase, runAutoBackup, autoBackupFolder } from './state'
+import * as cloud from './sync/service'
 
 type Handlers = { [N in keyof Api]: { [M in keyof Api[N]]: Api[N][M] } }
 
@@ -418,6 +419,21 @@ export const handlers: Handlers = {
   reports: {
     async summary() {
       return repo().report()
+    }
+  },
+
+  sync: {
+    async status() {
+      return cloud.status()
+    },
+    async signIn(email: string, password: string) {
+      return cloud.signIn(String(email ?? ''), String(password ?? ''))
+    },
+    async signOut() {
+      return cloud.signOut()
+    },
+    async now() {
+      return cloud.syncNow()
     }
   }
 }

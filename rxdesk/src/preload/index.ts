@@ -5,7 +5,7 @@ import type { PreloadBridge } from '../shared/api'
 const bridge: PreloadBridge = {
   invoke: (method, args) => ipcRenderer.invoke('api', method, args),
   on: (channel, listener) => {
-    const allowed = ['db-replaced', 'backup-failed', 'locked']
+    const allowed = ['db-replaced', 'backup-failed', 'locked', 'sync-status']
     if (!allowed.includes(channel)) return () => undefined
     const fn = (_e: unknown, payload: unknown) => listener(payload)
     ipcRenderer.on(channel, fn)

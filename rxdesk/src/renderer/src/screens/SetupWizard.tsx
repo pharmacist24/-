@@ -4,6 +4,7 @@ import {
   Center,
   Checkbox,
   Group,
+  Modal,
   NumberInput,
   Paper,
   PasswordInput,
@@ -22,10 +23,12 @@ import { api } from '../lib/api'
 import { useApp } from '../lib/app-context'
 import { notifyError, notifyOk } from '../lib/notify'
 import ProfileForm from '../components/ProfileForm'
+import { SyncSignInForm } from '../components/SyncPanel'
 
 export default function SetupWizard() {
   const { t, lang, settings, profile: initialProfile, reload, updateSettings } = useApp()
   const [step, setStep] = useState(0)
+  const [cloudOpen, setCloudOpen] = useState(false)
   const [profile, setProfile] = useState<ClinicProfile>(initialProfile)
   const [paper, setPaper] = useState<{ preset: PaperPreset; widthMm: number; heightMm: number }>({ preset: 'A5', ...PAPER_SIZES.A5 })
   const [usePin, setUsePin] = useState(false)
@@ -94,6 +97,12 @@ export default function SetupWizard() {
                   id="setup-language"
                 />
               </div>
+              <Button variant="subtle" onClick={() => setCloudOpen(true)} id="setup-cloud">
+                {t('sync.wizard')}
+              </Button>
+              <Modal opened={cloudOpen} onClose={() => setCloudOpen(false)} title={t('sync.tab')} centered>
+                <SyncSignInForm onDone={() => setCloudOpen(false)} />
+              </Modal>
             </Stack>
           )}
           {step === 1 && <ProfileForm value={profile} onChange={setProfile} section="doctor" />}

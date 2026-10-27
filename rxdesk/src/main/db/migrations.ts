@@ -1,6 +1,7 @@
 import type Database from 'better-sqlite3'
 import { BUILTIN_CONDITIONS } from '@shared/medical/conditions'
 import { normalizeForSearch } from '@shared/text'
+import { NEW_UUID_SQL, NOW_SQL, SYNC_TABLES, syncTriggersSql } from '@shared/sync/schema'
 
 // Versioned schema migrations. NEVER edit a migration that has shipped:
 // add a new entry with the next version number instead.
@@ -152,6 +153,39 @@ export const migrations: Migration[] = [
     name: 'medicine site (eye)',
     up: (db) => {
       db.exec(`ALTER TABLE prescription_items ADD COLUMN site TEXT NOT NULL DEFAULT ''`)
+    }
+  },
+  {
+    version: 4,
+    name: 'online sync (uid, dirty flags, delete log)',
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE sync_state (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+        CREATE TABLE sync_deletes (tbl TEXT NOT NULL, uid TEXT NOT NULL, deleted_at TEXT NOT NULL, PRIMARY KEY (tbl, uid));
+        CREATE TABLE sync_apply (x INTEGER);
+      `)
+      for (const t of SYNC_TABLES) {
+        db.exec(`
+          ALTER TABLE ${t.name} ADD COLUMN uid TEXT;
+          ALTER TABLE ${t.name} ADD COLUMN dirty INTEGER NOT NULL DEFAULT 0;
+          ALTER TABLE ${t.name} ADD COLUMN changed_at TEXT NOT NULL DEFAULT '';
+        `)
+      }
+      // Existing rows: give them ids and mark them for upload. The built-in condition library is
+      // the same on every PC, so untouched built-in rows are not uploaded.
+      db.exec(`
+        UPDATE conditions SET uid = 'cond:' || key;
+        UPDATE conditions SET dirty = 1 WHERE is_builtin = 0 OR hidden = 1;
+      `)
+      for (const t of SYNC_TABLES) {
+        if (t.name !== 'conditions') db.exec(`UPDATE ${t.name} SET uid = ${NEW_UUID_SQL}, dirty = 1`)
+        db.exec(`
+          UPDATE ${t.name} SET changed_at = ${NOW_SQL};
+          CREATE UNIQUE INDEX idx_${t.name}_uid ON ${t.name}(uid);
+          CREATE INDEX idx_${t.name}_dirty ON ${t.name}(dirty) WHERE dirty > 0;
+        `)
+      }
+      db.exec(syncTriggersSql())
     }
   }
 ]

@@ -52,7 +52,7 @@ describe('migrations', () => {
     db.prepare("INSERT INTO prescription_items(prescription_id, position, drug_name) VALUES(1, 0, 'Old drug')").run()
     db.close()
     const res = openDatabase(file)
-    expect(res.applied).toEqual([3])
+    expect(res.applied).toEqual([3, 4])
     expect(res.repo.getPrescription(1)!.items[0]).toMatchObject({ drugName: 'Old drug', site: '' })
     res.repo.db.close()
   })

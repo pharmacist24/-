@@ -20,6 +20,8 @@ import type { AppSettings, ClinicProfile } from '@shared/types'
 import { api } from './lib/api'
 import { AppProvider, useApp, type Route } from './lib/app-context'
 import { theme } from './theme'
+import { onSyncedChanges, syncState, useSyncStatus } from './lib/sync'
+import { SyncIcon, syncStateColor, syncStateText } from './components/SyncPanel'
 import { makeT } from './i18n'
 import LockScreen from './screens/LockScreen'
 import SetupWizard from './screens/SetupWizard'
@@ -91,7 +93,9 @@ export default function App() {
 }
 
 function Root({ onLocked }: { onLocked: () => void }) {
-  const { settings } = useApp()
+  const { settings, reload } = useApp()
+  // Settings changed online (e.g. by the administrator) are shown as soon as they arrive.
+  useEffect(() => onSyncedChanges(() => void reload()), [reload])
   if (!settings.setupCompleted) return <SetupWizard />
   return <Shell onLocked={onLocked} />
 }
@@ -144,6 +148,7 @@ function Shell({ onLocked }: { onLocked: () => void }) {
             />
           ))}
           <Box style={{ flex: 1 }} />
+          <CloudButton />
           {settings.pinEnabled && (
             <UnstyledButton
               className="rx-lock-btn"
@@ -164,6 +169,26 @@ function Shell({ onLocked }: { onLocked: () => void }) {
   )
 }
 
+/** Small online-sync indicator at the bottom of the sidebar (opens Settings). */
+function CloudButton() {
+  const { t, navigate } = useApp()
+  const [s] = useSyncStatus()
+  const st = syncState(s)
+  return (
+    <UnstyledButton
+      className="rx-lock-btn"
+      onClick={() => navigate({ name: 'settings', tab: 'sync' })}
+      title={t(syncStateText(s))}
+      id="cloud-status"
+      data-state={st}
+      style={{ color: `var(--mantine-color-${syncStateColor(s)}-7)` }}
+    >
+      <SyncIcon state={st} size={18} /> {s.signedIn ? t(syncStateText(s)) : t('sync.tab')}
+      {s.signedIn && s.pending > 0 && st !== 'syncing' ? ` (${s.pending})` : ''}
+    </UnstyledButton>
+  )
+}
+
 function Screen({ route }: { route: Route }) {
   switch (route.name) {
     case 'rx':
@@ -179,6 +204,6 @@ function Screen({ route }: { route: Route }) {
     case 'reports':
       return <ReportsScreen />
     case 'settings':
-      return <SettingsScreen />
+      return <SettingsScreen key={route.tab ?? ''} initialTab={route.tab} />
   }
 }

@@ -13,7 +13,7 @@ export type Route =
   | { name: 'library' }
   | { name: 'designer' }
   | { name: 'reports' }
-  | { name: 'settings' }
+  | { name: 'settings'; tab?: string }
 
 interface AppContextValue {
   settings: AppSettings

@@ -235,3 +235,16 @@ export interface AppInfo {
 
 /** Result wrapper returned over IPC so errors can be shown as friendly messages. */
 export type IpcResult<T> = { ok: true; data: T } | { ok: false; code: string; message: string }
+
+export interface SyncStatus {
+  signedIn: boolean
+  email: string
+  clinicName: string
+  syncing: boolean
+  online: boolean
+  /** ISO time of the last successful sync ('' if none since the app started). */
+  lastSyncAt: string
+  lastError: string
+  /** Local changes waiting to be uploaded. */
+  pending: number
+}

@@ -5,6 +5,7 @@ import type { IpcResult } from '@shared/types'
 import { handlers } from './handlers'
 import { initLogger, log } from './logger'
 import { openMainDatabase, runAutoBackup, state } from './state'
+import { noteLocalChange, startSync } from './sync/service'
 
 // Keep all data in %APPDATA%\RxDesk (never inside the install folder) so it
 // survives updates and reinstalls.
@@ -54,6 +55,7 @@ function registerIpc(): void {
     if (!state.repo) return { ok: false, code: 'DB_ERROR', message: 'Database is not available' }
     try {
       const data = await impl(...(Array.isArray(args) ? args : []))
+      if (ns !== 'sync') noteLocalChange()
       return { ok: true, data }
     } catch (e) {
       const code = friendlyCode(e)
@@ -138,6 +140,8 @@ async function start(): Promise<void> {
   // Daily automatic backup: shortly after start, then check every hour.
   setTimeout(() => void runAutoBackup(), 15_000)
   setInterval(() => void runAutoBackup(), 60 * 60 * 1000)
+  // Online sync (only does something after the doctor signed in).
+  startSync()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

@@ -4,6 +4,7 @@ import path from 'path'
 import { getVersion, LATEST_VERSION, migrate } from './migrations'
 import { Repo } from './repo'
 import { seedReferenceData } from './seed'
+import { SyncEngine } from '@shared/sync/engine'
 
 export interface OpenResult {
   repo: Repo
@@ -25,7 +26,10 @@ export function openDatabase(file: string, beforeMigrate?: (fromVersion: number)
     if (previousVersion > 0 && previousVersion < LATEST_VERSION && beforeMigrate) beforeMigrate(previousVersion)
     const applied = migrate(db)
     const repo = new Repo(db)
-    if (previousVersion === 0) seedReferenceData(repo)
+    if (previousVersion === 0) {
+      seedReferenceData(repo)
+      SyncEngine.markAllClean(db)
+    }
     return { repo, created, applied, previousVersion }
   } catch (e) {
     db.close()

@@ -22,6 +22,7 @@ import {
 import { modals } from '@mantine/modals'
 import {
   IconBuildingHospital,
+  IconCloud,
   IconDatabase,
   IconDeviceFloppy,
   IconFileExport,
@@ -42,10 +43,11 @@ import { api } from '../lib/api'
 import { useApp } from '../lib/app-context'
 import { notifyError, notifyOk } from '../lib/notify'
 import ProfileForm from '../components/ProfileForm'
+import SyncTab from '../components/SyncPanel'
 
-export default function SettingsScreen() {
+export default function SettingsScreen({ initialTab }: { initialTab?: string }) {
   const { t } = useApp()
-  const [tab, setTab] = useState<string | null>('rxform')
+  const [tab, setTab] = useState<string | null>(initialTab ?? 'rxform')
   return (
     <div className="rx-page-wrap">
       <Title order={2} mb="md">
@@ -71,6 +73,9 @@ export default function SettingsScreen() {
           <Tabs.Tab value="security" leftSection={<IconLock size={18} />} data-tab="security">
             {t('st.security')}
           </Tabs.Tab>
+          <Tabs.Tab value="sync" leftSection={<IconCloud size={18} />} data-tab="sync">
+            {t('sync.tab')}
+          </Tabs.Tab>
           <Tabs.Tab value="about" leftSection={<IconInfoCircle size={18} />}>
             {t('st.about')}
           </Tabs.Tab>
@@ -93,6 +98,9 @@ export default function SettingsScreen() {
           </Tabs.Panel>
           <Tabs.Panel value="security">
             <SecurityTab />
+          </Tabs.Panel>
+          <Tabs.Panel value="sync">
+            <SyncTab />
           </Tabs.Panel>
           <Tabs.Panel value="about">
             <AboutTab />
