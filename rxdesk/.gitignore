@@ -5,3 +5,4 @@ dist
 .vite
 test-output
 dist-winetest
+smoke-output
