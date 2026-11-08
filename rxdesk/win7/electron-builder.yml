@@ -15,7 +15,8 @@ files:
 asar: true
 asarUnpack:
   - "**/*.node"
-npmRebuild: true
+# The SQLite module comes from its official prebuilds (win7-sqlite-prebuild.cjs + after-pack), never compiled.
+npmRebuild: false
 win:
   target:
     - target: nsis

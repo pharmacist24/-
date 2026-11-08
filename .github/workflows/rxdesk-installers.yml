@@ -19,6 +19,9 @@ jobs:
   build:
     runs-on: windows-latest
     timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
 
@@ -34,8 +37,11 @@ jobs:
 
       - name: Windows 7 / 8 installer (32 + 64-bit)
         working-directory: rxdesk/win7
+        # better-sqlite3 9.6 has no prebuild for the build machine's Node 22, so its install script would try to
+        # compile it; skip scripts and download the official Electron 22 prebuilds instead.
         run: |
-          npm ci
+          npm ci --ignore-scripts
+          node ../scripts/win7-sqlite-prebuild.cjs
           npm run dist
 
       - name: Publish release
