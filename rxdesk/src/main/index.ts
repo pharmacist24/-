@@ -8,6 +8,7 @@ import { handlers } from './handlers'
 import { initLogger, log } from './logger'
 import { openMainDatabase, runAutoBackup, state } from './state'
 import { noteLocalChange, startSync } from './sync/service'
+import { applyGraphicsMode, isSafeGraphics, markWindowShown, reportStartupError, restartInSafeGraphics, wasWindowShown } from './startup'
 
 // Keep all data in %APPDATA%\RxDesk (never inside the install folder) so it
 // survives updates and reinstalls.
@@ -21,10 +22,31 @@ app.commandLine.appendSwitch('lang', 'en-GB')
 state.dataDir = app.getPath('userData')
 state.dbPath = path.join(state.dataDir, 'rxdesk.db')
 initLogger(path.join(state.dataDir, 'logs'))
-log.info(`RxDesk ${app.getVersion()} starting`, { platform: process.platform, electron: process.versions.electron })
+applyGraphicsMode()
+log.info(`RxDesk ${app.getVersion()} starting`, {
+  platform: process.platform,
+  windows: process.platform === 'win32' ? require('os').release() : undefined,
+  electron: process.versions.electron,
+  arch: process.arch,
+  safeGraphics: isSafeGraphics()
+})
 
-process.on('uncaughtException', (e) => log.error('Uncaught exception', e))
+// Before the window is on screen, an error must never leave the user with nothing: show it and stop.
+process.on('uncaughtException', (e) => {
+  log.error('Uncaught exception', e)
+  if (!wasWindowShown()) {
+    reportStartupError('Unexpected error while starting', e)
+    app.exit(1)
+  }
+})
 process.on('unhandledRejection', (e) => log.error('Unhandled rejection', e))
+
+// GPU process crashes (broken graphics drivers): restart once with graphics acceleration off.
+app.on('child-process-gone', (_e, details) => {
+  if (details.type !== 'GPU' || details.reason === 'clean-exit' || details.reason === 'killed') return
+  log.error('GPU process gone', details)
+  restartInSafeGraphics('GPU process ' + details.reason, (m, x) => log.warn(m, x))
+})
 
 if (!app.requestSingleInstanceLock()) {
   app.quit()
@@ -36,7 +58,13 @@ if (!app.requestSingleInstanceLock()) {
       w.focus()
     }
   })
-  app.whenReady().then(start)
+  app.whenReady()
+    .then(start)
+    .catch((e) => {
+      log.error('Start-up failed', e)
+      reportStartupError('Start-up failed', e)
+      app.exit(1)
+    })
 }
 
 function friendlyCode(e: unknown): string {
@@ -86,10 +114,15 @@ function createWindow(): BrowserWindow {
     }
   })
   state.mainWindow = win
-  win.once('ready-to-show', () => {
+  const reveal = () => {
+    if (win.isDestroyed() || win.isVisible()) return
     win.maximize()
     win.show()
-  })
+    markWindowShown()
+  }
+  win.once('ready-to-show', reveal)
+  // If the page never reports it is ready (slow PC, graphics trouble), show the window anyway.
+  setTimeout(reveal, 10_000)
   // Never open other windows or navigate away from the app.
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:\/\//.test(url)) shell.openExternal(url).catch(() => undefined)
@@ -98,7 +131,26 @@ function createWindow(): BrowserWindow {
   win.webContents.on('will-navigate', (e, url) => {
     if (!url.startsWith(process.env.ELECTRON_RENDERER_URL ?? 'file://')) e.preventDefault()
   })
-  win.webContents.on('render-process-gone', (_e, details) => log.error('Renderer process gone', details))
+  win.webContents.on('render-process-gone', (_e, details) => {
+    log.error('Renderer process gone', details)
+    if (details.reason === 'clean-exit' || win.isDestroyed()) return
+    // Crashed before anything was shown: most often a graphics problem -> safe graphics mode.
+    if (!wasWindowShown() && restartInSafeGraphics('page ' + details.reason, (m, x) => log.warn(m, x))) return
+    const choice = dialog.showMessageBoxSync(win, {
+      type: 'error',
+      title: 'RxDesk',
+      message: 'توقفت شاشة RxDesk بشكل غير متوقع. بياناتك محفوظة.\nThe RxDesk screen stopped unexpectedly. Your data is safe.',
+      detail: `${details.reason} (${details.exitCode})`,
+      buttons: ['Reload / إعادة التحميل', 'Close / إغلاق'],
+      defaultId: 0
+    })
+    if (choice === 0) win.reload()
+    else app.quit()
+  })
+  win.webContents.on('did-fail-load', (_e, code, description, url) => {
+    log.error('Page failed to load', { code, description, url })
+    reportStartupError('The app screen could not be loaded', new Error(`${description} (${code}) ${url}`))
+  })
   win.webContents.on('before-input-event', (event, input) => {
     // Developer tools only in development (F12).
     if (input.type === 'keyDown' && input.key === 'F12' && !app.isPackaged) {
