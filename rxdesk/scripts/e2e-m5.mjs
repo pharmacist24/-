@@ -91,7 +91,7 @@ export default async function ({ page, app, shot, check, sleep }) {
   await page.locator('#designer-canvas').click({ position: { x: 5, y: 5 } })
   await page.waitForSelector('#page-panel')
   const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.click('#upload-bg')])
-  await chooser.setFiles(path.join(out, 'pdf-a5-1.png'))
+  await chooser.setFiles(path.resolve('resources/icon.png'))
   await sleep(800)
   check((await page.locator('#designer-canvas img.rx-bg').count()) === 1, 'background image shown in the designer')
   await page.fill('#offset-x', '1.5')
