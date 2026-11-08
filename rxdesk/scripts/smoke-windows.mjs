@@ -32,7 +32,17 @@ const printLog = (dir, title) => {
 
 // 1. Install
 console.log('Installing', installer)
-const inst = spawnSync(path.resolve(installer), ['/S'], { stdio: 'inherit' })
+const fileInfo = fs.statSync(installer)
+console.log('installer size', fileInfo.size)
+let inst = spawnSync(path.resolve(installer), ['/S'], { stdio: 'inherit' })
+if (inst.status !== 0) {
+  console.log(`installer exit code ${inst.status} - Windows crash records:`)
+  const ps = spawnSync('powershell', ['-NoProfile', '-Command',
+    "Get-WinEvent -FilterHashtable @{LogName='Application'; Id=1000,1001,1026} -MaxEvents 4 -ErrorAction SilentlyContinue | Format-List TimeCreated,Id,Message"], { encoding: 'utf8' })
+  console.log(ps.stdout, ps.stderr)
+  console.log('retrying the install without /S ... (/S only)')
+  inst = spawnSync('cmd', ['/c', 'start', '/wait', '', path.resolve(installer), '/S'], { stdio: 'inherit' })
+}
 check(inst.status === 0, `installer exit code ${inst.status}`)
 const exe = path.join(process.env.LOCALAPPDATA, 'Programs', 'rxdesk', 'RxDesk.exe')
 for (let i = 0; i < 30 && !fs.existsSync(exe); i++) await sleep(1000)

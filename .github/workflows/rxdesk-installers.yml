@@ -64,6 +64,16 @@ jobs:
           name: smoke-output
           path: rxdesk/smoke-output
 
+      - name: Keep the built installers (for inspection)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: installers
+          path: |
+            rxdesk/dist/*.exe
+            rxdesk/win7/dist/*.exe
+          retention-days: 3
+
       - name: Stop if a smoke test failed
         if: steps.smoke10.outcome != 'success' || steps.smoke7.outcome != 'success'
         run: |
