@@ -19,9 +19,17 @@ const check = (cond, msg) => {
   if (!cond) failures++
 }
 
+// E2E_APP_DIR=win7 tests the Windows 7 build (Electron 22) instead of the main app.
+function launchTarget() {
+  const dir = process.env.E2E_APP_DIR || '.'
+  const opts = { args: [dir, '--no-sandbox'] }
+  if (process.env.E2E_APP_DIR) opts.executablePath = path.resolve(dir, 'node_modules/electron/dist/electron')
+  return opts
+}
+
 const t0 = Date.now()
 const app = await electron.launch({
-  args: ['.', '--no-sandbox'],
+  ...launchTarget(),
   env: { ...process.env, RXDESK_DATA_DIR: dataDir, NODE_ENV: 'production' }
 })
 const page = await app.firstWindow()
@@ -113,7 +121,7 @@ if (stage === 'm8') {
 
 if (stage !== 'm2') {
   const mod = await import(`./e2e-${stage}.mjs`)
-  await mod.default({ page, app, shot, check, sleep, dataDir })
+  await mod.default({ page, app, shot, check, sleep, dataDir, launchTarget })
 }
 
 await app.close().catch(() => {})

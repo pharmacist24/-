@@ -36,6 +36,22 @@ npm run dev          # start the app with hot reload
 | `npm run e2e` | End-to-end walkthrough of the real app with Playwright (screenshots in `test-output/`). On Linux without a display: `xvfb-run -a npm run e2e` |
 | **`npm run dist`** | **Build the Windows installer `dist/RxDesk-Setup-1.0.0.exe`** |
 
+## Windows 7 installer
+
+The main installer needs Windows 10 or 11. For clinics still on **Windows 7 SP1 / 8 / 8.1** there is a second
+installer, `RxDesk-Setup-Win7-1.0.0.exe` (64-bit and 32-bit in one file), built from the same source with
+Electron 22.3, the last Electron that runs on Windows 7:
+
+```bash
+cd rxdesk
+npm run dist:win7        # → win7/dist/RxDesk-Setup-Win7-1.0.0.exe
+```
+
+`win7/` is a small separate npm project (Electron 22, better-sqlite3 9.6, undici for `fetch` on Node 16); its
+build reads `../src`. Both installers use the same data folder, so a PC can move from the Windows 7 installer to
+the normal one later and keep its data. Windows 7 and Electron 22 no longer receive security updates.
+Test it with `E2E_APP_DIR=win7 node scripts/e2e.mjs m2` (after `cd win7 && npm run build`).
+
 ## Building the installer
 
 ```bash

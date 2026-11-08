@@ -23,17 +23,19 @@ exports.default = async function afterPack(context) {
 
   const projectDir = context.packager.projectDir
   const electronVersion = context.packager.config.electronVersion || require(path.join(projectDir, 'node_modules/electron/package.json')).version
+  // electron-builder Arch enum: 0 ia32, 1 x64, 2 armv7l, 3 arm64 (the Windows 7 installer contains ia32 + x64).
+  const arch = ['ia32', 'x64', 'armv7l', 'arm64'][context.arch] || 'x64'
   const work = fs.mkdtempSync(path.join(os.tmpdir(), 'rxdesk-sqlite-win-'))
   fs.copyFileSync(path.join(projectDir, 'node_modules/better-sqlite3/package.json'), path.join(work, 'package.json'))
-  console.log(`  • fetching Windows better-sqlite3 for Electron ${electronVersion}`)
+  console.log(`  • fetching Windows ${arch} better-sqlite3 for Electron ${electronVersion}`)
   execFileSync(
     process.execPath,
-    [require.resolve('prebuild-install/bin.js', { paths: [projectDir] }), '--runtime', 'electron', '--target', electronVersion, '--platform', 'win32', '--arch', 'x64', '--verbose'],
+    [require.resolve('prebuild-install/bin.js', { paths: [projectDir] }), '--runtime', 'electron', '--target', electronVersion, '--platform', 'win32', '--arch', arch, '--verbose'],
     { cwd: work, stdio: 'inherit' }
   )
   const downloaded = path.join(work, 'build', 'Release', 'better_sqlite3.node')
   if (!fs.existsSync(downloaded) || !isWindowsDll(downloaded)) throw new Error('Could not get the Windows build of better-sqlite3')
   fs.copyFileSync(downloaded, target)
   fs.rmSync(work, { recursive: true, force: true })
-  console.log('  • replaced better_sqlite3.node with the Windows build')
+  console.log(`  • replaced better_sqlite3.node with the Windows ${arch} build`)
 }

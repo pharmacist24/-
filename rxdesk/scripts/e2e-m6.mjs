@@ -3,7 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import { _electron as electron } from 'playwright-core'
 
-export default async function ({ page, app, shot, check, sleep, dataDir }) {
+export default async function ({ page, app, shot, check, sleep, dataDir, launchTarget }) {
   const out = path.resolve('test-output')
   const stub = (save, open) =>
     app.evaluate(({ dialog, shell }, [s, o]) => {
@@ -95,7 +95,7 @@ export default async function ({ page, app, shot, check, sleep, dataDir }) {
 
   // Restart: the app must open locked.
   await app.close()
-  const app2 = await electron.launch({ args: ['.', '--no-sandbox'], env: { ...process.env, RXDESK_DATA_DIR: dataDir, NODE_ENV: 'production' } })
+  const app2 = await electron.launch({ ...launchTarget(), env: { ...process.env, RXDESK_DATA_DIR: dataDir, NODE_ENV: 'production' } })
   const p2 = await app2.firstWindow()
   await p2.waitForSelector('#pin-input', { timeout: 20000 })
   check(true, 'app opens locked after restart')

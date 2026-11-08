@@ -1,6 +1,7 @@
 // Online sync for the desktop app: sign-in, background sync and status.
 // The app works fully offline; nothing leaves the PC until the doctor signs in.
 import { app, net, safeStorage } from 'electron'
+import { randomUUID } from 'crypto'
 import fs from 'fs'
 import path from 'path'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
@@ -73,12 +74,75 @@ const storage = {
   }
 }
 
+/**
+ * Chromium's network stack (net.fetch, Electron 25+) uses the Windows proxy settings and certificate store.
+ * The Windows 7 build runs on Electron 22, which has no net.fetch: there the same network stack is used
+ * through net.request (Headers / Response come from undici, installed as globals by ./polyfill).
+ */
+function cloudFetch(): typeof fetch {
+  const n = net as unknown as { fetch?: typeof fetch }
+  if (typeof n.fetch === 'function') return (input, init) => n.fetch!(input as string, init as RequestInit)
+  return netRequestFetch as typeof fetch
+}
+
+class NoWebSocket {
+  readyState = 3
+  constructor() {
+    throw new Error('Live updates are not used by RxDesk')
+  }
+}
+
+// Headers Chromium sets itself; net.request refuses them.
+const RESTRICTED = new Set(['content-length', 'host', 'connection', 'transfer-encoding', 'upgrade', 'keep-alive', 'expect'])
+
+/** fetch() on top of Electron's net.request (older Electron): Windows proxy + certificate store, like net.fetch. */
+function netRequestFetch(input: string | URL | { url: string }, init: RequestInit = {}): Promise<Response> {
+  return new Promise((resolve, reject) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+    const req = net.request({ url, method: (init.method ?? 'GET').toUpperCase(), redirect: 'follow' })
+    new Headers(init.headers).forEach((value, key) => {
+      if (!RESTRICTED.has(key.toLowerCase())) req.setHeader(key, value)
+    })
+    const signal = init.signal
+    if (signal) {
+      if (signal.aborted) return reject(new Error('The request was aborted'))
+      signal.addEventListener('abort', () => {
+        req.abort()
+        reject(new Error('The request was aborted'))
+      })
+    }
+    req.on('response', (res) => {
+      const chunks: Buffer[] = []
+      res.on('data', (c: Buffer) => chunks.push(c))
+      res.on('error', reject)
+      res.on('end', () => {
+        const headers = new Headers()
+        for (const [k, v] of Object.entries(res.headers)) for (const x of ([] as string[]).concat(v)) headers.append(k, x)
+        const noBody = [101, 204, 205, 304].includes(res.statusCode)
+        resolve(new Response(noBody ? null : Buffer.concat(chunks), { status: res.statusCode, statusText: res.statusMessage, headers }))
+      })
+    })
+    req.on('error', reject)
+    const body = init.body
+    if (body !== undefined && body !== null) {
+      if (typeof body === 'string') req.write(body)
+      else if (body instanceof ArrayBuffer) req.write(Buffer.from(body))
+      else if (ArrayBuffer.isView(body)) req.write(Buffer.from(body.buffer, body.byteOffset, body.byteLength))
+      else req.write(String(body))
+    }
+    req.end()
+  })
+}
+
 function getClient(): SupabaseClient {
   if (!client) {
     client = createClient(CLOUD_URL, CLOUD_ANON_KEY, {
       auth: { storage, persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
       // Chromium's network stack: uses the Windows proxy settings and certificate store.
-      global: { fetch: (input, init) => net.fetch(input as string, init as RequestInit) }
+      global: { fetch: cloudFetch() },
+      // RxDesk does not use Supabase live updates. Node 16 (Windows 7 build) has no WebSocket, which the
+      // client insists on: give it one that never connects.
+      ...(typeof (globalThis as { WebSocket?: unknown }).WebSocket === 'function' ? {} : { realtime: { transport: NoWebSocket as never } })
     })
   }
   return client
@@ -87,7 +151,7 @@ function getClient(): SupabaseClient {
 function deviceId(): string {
   let id = SyncEngine.getState(db(), 'device_id')
   if (!id) {
-    id = 'device:' + crypto.randomUUID()
+    id = 'device:' + randomUUID()
     SyncEngine.setState(db(), 'device_id', id)
   }
   return id

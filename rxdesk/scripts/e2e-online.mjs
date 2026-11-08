@@ -12,7 +12,7 @@ import { createClient } from '@supabase/supabase-js'
 const URL = 'https://ticujgmhqkfdgrnkgnmp.supabase.co'
 const KEY = 'sb_publishable_-faQ9CUPCm9ztfKKCT9Lww_T9dUniJq'
 
-export default async function ({ page, app, shot, check, sleep }) {
+export default async function ({ page, app, shot, check, sleep, launchTarget }) {
   const proxy = process.env.HTTPS_PROXY || process.env.https_proxy
   const stamp = Date.now().toString(36)
   const clinicName = 'E2E clinic ' + stamp
@@ -167,7 +167,7 @@ export default async function ({ page, app, shot, check, sleep }) {
 
     // A brand-new PC signs in from the setup wizard and downloads the clinic.
     const fresh = fs.mkdtempSync(path.join(os.tmpdir(), 'rxdesk-e2e-pc2-'))
-    const app2 = await electron.launch({ args: ['.', '--no-sandbox'], env: { ...process.env, RXDESK_DATA_DIR: fresh, NODE_ENV: 'production' } })
+    const app2 = await electron.launch({ ...launchTarget(), env: { ...process.env, RXDESK_DATA_DIR: fresh, NODE_ENV: 'production' } })
     try {
       if (proxy) await app2.evaluate(async ({ session }, p) => session.defaultSession.setProxy({ proxyRules: p }), proxy)
       const pc2 = await app2.firstWindow()

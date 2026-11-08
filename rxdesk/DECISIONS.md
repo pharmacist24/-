@@ -178,3 +178,12 @@ Choices made where the brief was open, picking the simplest option for a non-tec
 - **Web hosting moved to Render** (static site `rxdesk-admin`, https://rxdesk-admin.onrender.com); `vercel.json`
   stays as an alternative.
 
+## Windows 7 installer
+- Electron dropped Windows 7/8/8.1 in v23, so the main installer (Electron 38) needs Windows 10/11. A separate
+  installer built with **Electron 22.3.27** (Chromium 108, Node 16.17) covers Windows 7 SP1 / 8 / 8.1, at the
+  owner's request, knowing it gets no security updates.
+- Same source code; only the packaging differs (`win7/`): better-sqlite3 9.6.0 (the newest with Electron 22
+  Windows prebuilds), undici for fetch on Node 16 (`src/main/sync/polyfill.ts`), and x64 + ia32 in one installer
+  because many Windows 7 PCs are 32-bit. Same app id and data folder as the main installer.
+- Online sync from Windows 7 needs TLS 1.2, which updated Windows 7 SP1 has.
+

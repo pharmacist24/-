@@ -1,3 +1,5 @@
+// Must stay first: gives the Windows 7 build (Node 16) the fetch API. No effect on newer Electron.
+import './sync/polyfill'
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron'
 import path from 'path'
 import { UNLOCKED_METHODS } from '@shared/api'

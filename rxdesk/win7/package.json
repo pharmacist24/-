@@ -1,0 +1,30 @@
+{
+  "name": "rxdesk",
+  "productName": "RxDesk",
+  "version": "1.0.0",
+  "description": "RxDesk - offline prescription writing for private clinics (Windows 7 build)",
+  "author": {
+    "name": "RxDesk",
+    "email": "support@rxdesk.local"
+  },
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "out/main/index.js",
+  "scripts": {
+    "build": "node ../node_modules/electron-vite/bin/electron-vite.js build --config electron.vite.config.ts",
+    "dist": "npm run build && electron-builder --win nsis --x64 --ia32 --publish never",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.115.0",
+    "better-sqlite3": "9.6.0",
+    "exceljs": "4.4.0",
+    "jszip": "3.10.1",
+    "qrcode": "1.5.4",
+    "undici": "5.29.0"
+  },
+  "devDependencies": {
+    "electron": "22.3.27",
+    "electron-builder": "26.0.20"
+  }
+}

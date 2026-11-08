@@ -9,6 +9,8 @@
 
 البرنامج يعمل بدون إنترنت تماماً، ولا تخرج أي بيانات من الجهاز.
 
+**ويندوز 7:** استخدم ملف التثبيت `RxDesk-Setup-Win7-1.0.0.exe` (يعمل على ويندوز 7 و 8 بنسختي 32 و 64 بت). على ويندوز 10 و 11 استخدم الملف العادي.
+
 ## ٢. أول تشغيل (معالج الإعداد)
 - اختر اللغة (عربي / English).
 - اكتب اسم الطبيب بالعربي والإنجليزي، والتخصص، ورقم الترخيص.
@@ -124,6 +126,8 @@
 3. It installs in one step, adds **RxDesk** shortcuts to the Desktop and Start Menu, and opens the app.
 
 RxDesk works completely offline. No data ever leaves the computer.
+
+**Windows 7:** use `RxDesk-Setup-Win7-1.0.0.exe` (Windows 7 / 8, 32-bit and 64-bit). On Windows 10 / 11 use the normal installer.
 
 ## 2. First start (setup wizard)
 - Choose the language (Arabic / English).

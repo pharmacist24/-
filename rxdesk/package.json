@@ -22,7 +22,8 @@
     "dev:web": "vite --config web/vite.config.ts",
     "build:web": "vite build --config web/vite.config.ts",
     "preview:web": "vite preview --config web/vite.config.ts",
-    "e2e:online": "npm run build && npm run build:web && node scripts/e2e.mjs online"
+    "e2e:online": "npm run build && npm run build:web && node scripts/e2e.mjs online",
+    "dist:win7": "cd win7 && npm ci && npm run dist"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.115.0",
