@@ -3,10 +3,11 @@
 //    new Windows) crash Chromium's GPU or page process at start. Then RxDesk restarts itself with graphics
 //    acceleration turned off and remembers that choice for this PC (file `safe-graphics` in the data folder).
 //  - Any start-up error is shown in a dialog and written to `startup-error.txt` in the data folder.
-import { app, dialog, shell } from 'electron'
+import { app, dialog, shell, type BrowserWindow } from 'electron'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
+import { isBlankBitmap } from './blank'
 
 const WIN7_BUILD = import.meta.env.VITE_RXDESK_WIN7 === '1'
 let safe = false
@@ -24,6 +25,15 @@ export function applyGraphicsMode(): void {
   const win7BuildOnNewWindows = WIN7_BUILD && windowsMajor() >= 10
   safe = win7BuildOnNewWindows || process.argv.includes('--safe-graphics') || fs.existsSync(flagFile())
   if (!safe) return
+  // Started from the "RxDesk (safe mode)" shortcut: remember it for this PC.
+  if (process.argv.includes('--safe-graphics') && !fs.existsSync(flagFile())) {
+    try {
+      fs.mkdirSync(path.dirname(flagFile()), { recursive: true })
+      fs.writeFileSync(flagFile(), `${new Date().toISOString()} started with --safe-graphics\n`)
+    } catch {
+      /* the switch still applies to this start */
+    }
+  }
   app.disableHardwareAcceleration()
   app.commandLine.appendSwitch('disable-gpu')
   app.commandLine.appendSwitch('disable-gpu-compositing')
@@ -81,6 +91,39 @@ export function reportStartupError(title: string, err: unknown): void {
   } catch {
     /* no UI available */
   }
+}
+
+let mainWindow: BrowserWindow | null = null
+let logger: (level: 'info' | 'warn', msg: string, extra?: unknown) => void = () => undefined
+let checked = false
+
+export function watchWindow(win: BrowserWindow, log: (level: 'info' | 'warn', msg: string, extra?: unknown) => void): void {
+  mainWindow = win
+  logger = log
+  checked = false
+}
+
+/**
+ * Called when the screen code reports it has drawn itself. Shortly after, RxDesk takes a snapshot of its own
+ * window: if it is completely blank although the screen is ready, the graphics driver is not drawing it
+ * (white window) and RxDesk restarts once in safe graphics mode.
+ */
+export function checkWindowDrawn(): void {
+  if (checked || !mainWindow) return
+  checked = true
+  const win = mainWindow
+  setTimeout(async () => {
+    try {
+      if (win.isDestroyed() || win.isMinimized() || !win.isVisible()) return
+      const image = await win.webContents.capturePage()
+      const size = image.getSize()
+      const blank = size.width > 0 && isBlankBitmap(image.toBitmap())
+      logger('info', 'Screen drawn check', { width: size.width, height: size.height, blank, safeGraphics: safe })
+      if (blank && !safe) restartInSafeGraphics('white window (nothing drawn)', (m, x) => logger('warn', m, x))
+    } catch (e) {
+      logger('warn', 'Screen drawn check failed', String(e))
+    }
+  }, 2500)
 }
 
 export function wasWindowShown(): boolean {

@@ -66,6 +66,13 @@ export default function App() {
 
   const dir = (boot?.settings.language ?? 'ar') === 'ar' ? 'rtl' : 'ltr'
 
+  // Tell the main process the screen is drawn (it then checks the window is not blank).
+  useEffect(() => {
+    if (!boot && !error) return
+    const id = requestAnimationFrame(() => setTimeout(() => api.app.rendered().catch(() => undefined), 300))
+    return () => cancelAnimationFrame(id)
+  }, [boot, error])
+
   return (
     <DirectionProvider initialDirection={dir} detectDirection={false}>
       <MantineProvider theme={theme} defaultColorScheme="light">

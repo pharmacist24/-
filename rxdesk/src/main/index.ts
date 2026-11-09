@@ -8,7 +8,7 @@ import { handlers } from './handlers'
 import { initLogger, log } from './logger'
 import { openMainDatabase, runAutoBackup, state } from './state'
 import { noteLocalChange, startSync } from './sync/service'
-import { applyGraphicsMode, isSafeGraphics, markWindowShown, reportStartupError, restartInSafeGraphics, wasWindowShown } from './startup'
+import { applyGraphicsMode, isSafeGraphics, markWindowShown, reportStartupError, restartInSafeGraphics, wasWindowShown, watchWindow } from './startup'
 
 // Keep all data in %APPDATA%\RxDesk (never inside the install folder) so it
 // survives updates and reinstalls.
@@ -53,8 +53,10 @@ if (!app.requestSingleInstanceLock()) {
 } else {
   app.on('second-instance', () => {
     const w = state.mainWindow
-    if (w) {
+    log.info('Opened again while running: bringing the window to the front')
+    if (w && !w.isDestroyed()) {
       if (w.isMinimized()) w.restore()
+      if (!w.isVisible()) w.show()
       w.focus()
     }
   })
@@ -114,11 +116,22 @@ function createWindow(): BrowserWindow {
     }
   })
   state.mainWindow = win
+  watchWindow(win, (level, msg, extra) => log[level](msg, extra))
+  win.webContents.once('did-finish-load', () => log.info('Screen loaded'))
+  // Errors inside the screen code go to the log file too.
+  win.webContents.on('console-message', (...args: unknown[]) => {
+    // Electron 38 passes one event object; Electron 22 (Windows 7 build) passes (event, level, message, line, source).
+    const e = args[0] as { level?: string | number; message?: string; sourceId?: string; lineNumber?: number }
+    const level = e.level ?? (args[1] as number)
+    const message = e.message ?? (args[2] as string)
+    if (level === 'error' || level === 3) log.error('[screen] ' + String(message).slice(0, 2000), { source: e.sourceId ?? args[4], line: e.lineNumber ?? args[3] })
+  })
   const reveal = () => {
     if (win.isDestroyed() || win.isVisible()) return
     win.maximize()
     win.show()
     markWindowShown()
+    log.info('Window shown')
   }
   win.once('ready-to-show', reveal)
   // If the page never reports it is ready (slow PC, graphics trouble), show the window anyway.

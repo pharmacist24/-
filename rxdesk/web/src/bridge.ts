@@ -99,7 +99,8 @@ export const handlers: Handlers = {
     async openLogFile() {},
     async logError(message: string) {
       console.error('[rxdesk]', message)
-    }
+    },
+    async rendered() {}
   },
   auth: {
     async unlock() {

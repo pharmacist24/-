@@ -37,6 +37,7 @@ nsis:
   installerIcon: build/icon.ico
   uninstallerIcon: build/icon.ico
   uninstallDisplayName: RxDesk
+  include: build/installer.nsh
   artifactName: RxDesk-Setup-${version}.exe
 publish: null
 afterPack: scripts/after-pack.cjs

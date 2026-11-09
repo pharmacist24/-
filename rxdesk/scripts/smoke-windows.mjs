@@ -65,6 +65,8 @@ console.log('----- process output\n' + output.slice(-6000))
 fs.writeFileSync(path.join(out, 'plain-output.txt'), output)
 const plainLog = printLog(plainDir, 'plain start log')
 check(/starting/.test(plainLog), 'log shows the app starting')
+check(/Screen drawn check/.test(plainLog), 'screen reported drawn (white-window check ran)')
+console.log('white-window check:', (plainLog.match(/Screen drawn check.*/) || ['(none)'])[0])
 check(fs.existsSync(path.join(plainDir, 'rxdesk.db')), 'database created')
 
 // 3. Through Playwright: the window renders and the setup wizard works

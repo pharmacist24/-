@@ -24,6 +24,7 @@ import { todayIso } from '@shared/text'
 import { log, getLogFile } from './logger'
 import { state, replaceDatabase, runAutoBackup, autoBackupFolder } from './state'
 import * as cloud from './sync/service'
+import { checkWindowDrawn } from './startup'
 
 type Handlers = { [N in keyof Api]: { [M in keyof Api[N]]: Api[N][M] } }
 
@@ -51,6 +52,9 @@ export const handlers: Handlers = {
     },
     async openLogFile() {
       await shell.openPath(getLogFile())
+    },
+    async rendered() {
+      checkWindowDrawn()
     },
     async logError(message: string) {
       log.error('[renderer]', String(message).slice(0, 4000))

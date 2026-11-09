@@ -58,6 +58,8 @@ export interface Api {
     openDataFolder(): Promise<void>
     openLogFile(): Promise<void>
     logError(message: string): Promise<void>
+    /** The screen has drawn itself (used to detect a white window caused by the graphics driver). */
+    rendered(): Promise<void>
   }
   auth: {
     unlock(pin: string): Promise<boolean>
@@ -152,7 +154,7 @@ export interface Api {
 export type ApiNamespace = keyof Api
 
 /** Methods allowed while the app is locked with a PIN. */
-export const UNLOCKED_METHODS = new Set(['app.info', 'app.logError', 'auth.unlock', 'settings.get'])
+export const UNLOCKED_METHODS = new Set(['app.info', 'app.logError', 'app.rendered', 'auth.unlock', 'settings.get'])
 
 export interface PreloadBridge {
   invoke(method: string, args: unknown[]): Promise<unknown>
