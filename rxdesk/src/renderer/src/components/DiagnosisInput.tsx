@@ -4,6 +4,7 @@ import { useDebouncedValue } from '@mantine/hooks'
 import type { Condition } from '@shared/types'
 import { api } from '../lib/api'
 import { useApp } from '../lib/app-context'
+import { uniqueOptions } from '../lib/options'
 
 /** Diagnoses are stored in the existing text column, joined with " + ". */
 export const DX_SEPARATOR = ' + '
@@ -73,7 +74,7 @@ export default function DiagnosisInput({ value, onChange, child }: { value: stri
       onChange={(v) => onChange(v.join(DX_SEPARATOR))}
       searchValue={search}
       onSearchChange={setSearch}
-      data={data}
+      data={uniqueOptions(data).filter((d) => !tags.includes(d))}
       filter={({ options }) => options}
       splitChars={[',', '،', '+']}
       acceptValueOnBlur

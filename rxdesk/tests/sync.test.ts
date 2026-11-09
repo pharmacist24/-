@@ -256,6 +256,26 @@ describe('sync engine', () => {
     expect(b.searchPatients('').length).toBe(2)
   })
 
+  it('the same dose phrase on two PCs becomes one phrase', async () => {
+    const remote = new FakeRemote()
+    const a = newPc('a')
+    const b = newPc('b')
+    for (const pc of [a, b]) {
+      pc.savePatient({ name: 'P', birthDate: '', birthDateEstimated: false, gender: '', phone: '', weight: '', allergies: '', chronicDiseases: '', notes: '' })
+      pc.saveDosePhrase({ text: '1 tablet twice daily after food' })
+    }
+    const ea = engine(a, remote, 'device:a')
+    const eb = engine(b, remote, 'device:b')
+    await ea.sync()
+    await eb.sync()
+    await ea.sync()
+    await eb.sync()
+    const count = (pc: typeof a) => pc.listDosePhrases().filter((p) => p.text === '1 tablet twice daily after food').length
+    expect(count(a)).toBe(1)
+    expect(count(b)).toBe(1)
+    expect(remote.live('dose_phrases').filter((r) => r.data.text === '1 tablet twice daily after food').length).toBe(1)
+  })
+
   it('keeps changes made during a failed upload and sends them next time', async () => {
     const remote = new FakeRemote()
     const a = newPc('a')

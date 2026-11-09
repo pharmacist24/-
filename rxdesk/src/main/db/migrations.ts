@@ -187,6 +187,14 @@ export const migrations: Migration[] = [
       }
       db.exec(syncTriggersSql())
     }
+  },
+  {
+    version: 5,
+    name: 'remove duplicate dose phrases (created by merging two PCs)',
+    up: (db) => {
+      // Keeps the oldest copy; the delete triggers also remove the extra copies online on the next sync.
+      db.exec(`DELETE FROM dose_phrases WHERE id NOT IN (SELECT MIN(id) FROM dose_phrases GROUP BY trim(text))`)
+    }
   }
 ]
 

@@ -27,7 +27,8 @@ export const SYNC_TABLES: SyncTableSpec[] = [
     watchColumns: ['name', 'search_name', 'form', 'strength', 'dose', 'frequency', 'duration', 'route', 'instructions'],
     naturalKey: { column: 'name', nocase: true }
   },
-  { name: 'dose_phrases' },
+  // Same phrase text on two PCs = one phrase (like drugs by name).
+  { name: 'dose_phrases', naturalKey: { column: 'text' } },
   { name: 'favorites' },
   {
     name: 'conditions',

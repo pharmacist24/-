@@ -8,6 +8,7 @@ import { api } from '../lib/api'
 import { useT } from '../lib/app-context'
 import { enterAsTab, focusNext } from '../lib/keyboard'
 import classes from './MedicinesEditor.module.css'
+import { uniqueOptions } from '../lib/options'
 
 export function emptyItem(): MedicineItem {
   return { ...EMPTY_ITEM }
@@ -233,7 +234,7 @@ const Row = memo(function Row({ index, item, isLast, canMoveDown, active, allerg
       {...common(field)}
       label={label}
       dir={dir}
-      data={data}
+      data={uniqueOptions(data)}
       limit={8}
       onChange={(v) => onUpdate(index, { [field]: v })}
       comboboxProps={{ withinPortal: true }}
@@ -246,7 +247,7 @@ const Row = memo(function Row({ index, item, isLast, canMoveDown, active, allerg
       {...common(field)}
       label={label}
       dir="auto"
-      data={data}
+      data={uniqueOptions(data)}
       maxDropdownHeight={280}
       filter={({ options, search }) => {
         const q = search.trim()
@@ -275,7 +276,7 @@ const Row = memo(function Row({ index, item, isLast, canMoveDown, active, allerg
             label={t('rx.drug')}
             dir="ltr"
             placeholder={isLast ? t('rx.addRow') + '…' : undefined}
-            data={drugs.map((d) => d.name)}
+            data={uniqueOptions(drugs.map((d) => d.name))}
             filter={({ options }) => options}
             selectFirstOptionOnChange={prefixMatch}
             renderOption={({ option }) => {
